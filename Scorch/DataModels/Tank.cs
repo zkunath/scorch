@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Scorch.Graphics;
 using System;
 
 namespace Scorch.DataModels
@@ -40,7 +41,10 @@ namespace Scorch.DataModels
             set
             {
                 _Power = MathHelper.Clamp(value, 0, 100);
-                ChildObjects["powerIndicator"].Scale = new Vector2(_Power / 100f * 190f / 128f, 1f);
+                // 190px = radius of aim indicator asset
+                // 128px = radius of power indicator asset
+                float scaleFactor = _Power / 100f * 190f / 128f;
+                ChildObjects["powerIndicator"].Scale = Vector2.One * scaleFactor;
             }
         }
 
@@ -59,13 +63,13 @@ namespace Scorch.DataModels
         {
             Color = color;
             Depth = DrawOrder.Front;
-
-            Texture = ColorizeTexture(graphicsDevice, Texture, Color);
+            Texture = GraphicsUtility.ColorizeTexture(graphicsDevice, Texture, Color);
+            var barrelPosition = new Vector2(16f, 4.5f);
 
             var barrel = new FieldObject(
                 "barrel",
-                ColorizeTexture(graphicsDevice, barrelTexture, Color),
-                new Vector2(16f, 3.5f));
+                GraphicsUtility.ColorizeTexture(graphicsDevice, barrelTexture, Color),
+                barrelPosition);
 
             barrel.Origin = new Vector2(1f, 3.5f);
             barrel.Depth = DrawOrder.Middle;
@@ -75,7 +79,7 @@ namespace Scorch.DataModels
             var powerIndicator = new FieldObject(
                 "powerIndicator",
                 powerIndicatorTexture,
-                new Vector2(16f, 3.5f));
+                barrelPosition);
 
             powerIndicator.Origin = new Vector2(0f, 17f);
             powerIndicator.Depth = DrawOrder.Back;
@@ -102,27 +106,6 @@ namespace Scorch.DataModels
             float aimLength = Math.Min(aim.Length(), maxLength);
             aimLength = (aimLength <= minLength ? 0 : aimLength);
             Power = (int)(aimLength / maxLength * 100);
-        }
-
-        private Texture2D ColorizeTexture(GraphicsDevice graphicsDevice, Texture2D texture, Color color)
-        {
-            Color[] textureData = new Color[texture.Width * texture.Height];
-            texture.GetData(textureData);
-            for (int x = 0; x < texture.Width; x++)
-            {
-                for (int y = 0; y < texture.Height; y++)
-                {
-                    var currentColor = textureData[x + y * texture.Width];
-                    if (currentColor != Color.Transparent)
-                    {
-                        textureData[x + y * texture.Width] = Color.Lerp(currentColor, color, 0.5f);
-                    }
-                }
-            }
-
-            var colorizedTexture = new Texture2D(graphicsDevice, texture.Width, texture.Height);
-            colorizedTexture.SetData(textureData);
-            return colorizedTexture;
         }
     }
 }

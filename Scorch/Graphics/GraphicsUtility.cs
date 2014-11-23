@@ -1,0 +1,101 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+
+namespace Scorch.Graphics
+{
+    public static class GraphicsUtility
+    {
+        public static Rectangle AlignRectangle(Rectangle bounds, Vector2 size, Align align)
+        {
+            float top = 0;
+            float left = 0;
+
+            if (align.HasFlag(Align.Left))
+            {
+                left = bounds.Left;
+            }
+            else if (align.HasFlag(Align.Right))
+            {
+                left = bounds.Width - size.X;
+            }
+            else if (align.HasFlag(Align.CenterX))
+            {
+                left = bounds.Left + (bounds.Width - size.X) / 2f;
+            }
+
+            if (align.HasFlag(Align.Top))
+            {
+                top = bounds.Top;
+            }
+            else if (align.HasFlag(Align.Bottom))
+            {
+                top = bounds.Height - size.Y;
+            }
+            else if (align.HasFlag(Align.CenterY))
+            {
+                top = bounds.Top + (bounds.Height - size.Y) / 2f;
+            }
+
+            return new Rectangle((int)left, (int)top, (int)size.X, (int)size.Y);
+        }
+
+        public static Vector2 AlignText(Rectangle bounds, SpriteFont font, string text, Align align)
+        {
+            var textSize = font.MeasureString(text);
+            var alignedTextRectangle = AlignRectangle(bounds, textSize, align);
+            return new Vector2(alignedTextRectangle.X, alignedTextRectangle.Y);
+        }
+
+        public static Texture2D CreateTexture(GraphicsDevice graphicsDevice, int width, int height, Color color)
+        {
+            var texture = new Texture2D(graphicsDevice, width, height);
+            return FillTexture(texture, color);
+        }
+
+        public static Texture2D FillTexture(Texture2D texture, Color color)
+        {
+            Color[] textureData = new Color[texture.Width * texture.Height];
+            for (int i = 0; i < textureData.Length; i++)
+            {
+                textureData[i] = color;
+            }
+
+            texture.SetData(textureData);
+            return texture;
+        }
+        public static Texture2D ColorizeTexture(GraphicsDevice graphicsDevice, Texture2D texture, Color color)
+        {
+            Color[] textureData = new Color[texture.Width * texture.Height];
+            texture.GetData(textureData);
+            for (int x = 0; x < texture.Width; x++)
+            {
+                for (int y = 0; y < texture.Height; y++)
+                {
+                    var currentColor = textureData[x + y * texture.Width];
+                    if (currentColor != Color.Transparent)
+                    {
+                        textureData[x + y * texture.Width] = Color.Lerp(currentColor, color, 0.5f);
+                    }
+                }
+            }
+
+            var colorizedTexture = new Texture2D(graphicsDevice, texture.Width, texture.Height);
+            colorizedTexture.SetData(textureData);
+            return colorizedTexture;
+        }
+    }
+
+    [Flags]
+    public enum Align
+    {
+        None = 0,
+        Left = 1,
+        Right = 2,
+        Top = 4,
+        Bottom = 8,
+        CenterX = 16,
+        CenterY = 32,
+        Center = 48
+    }
+}

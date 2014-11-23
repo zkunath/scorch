@@ -12,8 +12,10 @@ namespace Scorch
     /// <summary>
     /// This is the main type for your game
     /// </summary>
-    public class Game1 : Game
+    public class ScorchGame : Game
     {
+        public delegate void GameEventHandler(ScorchGame game);
+        
         GraphicsDeviceManager GraphicsDeviceManager;
         GraphicsEngine GraphicsEngine;
         HeadsUpDisplay HUD;
@@ -27,7 +29,7 @@ namespace Scorch
 
         int CurrentPlayerIndex = 0;
 
-        public Game1()
+        public ScorchGame()
         {
             GraphicsDeviceManager = new GraphicsDeviceManager(this);
             Randomizer = new Random();
@@ -43,7 +45,6 @@ namespace Scorch
         {
             base.Initialize();
             GraphicsEngine = new GraphicsEngine(GraphicsDevice);
-            HUD = new HeadsUpDisplay(GraphicsDevice, HudFont, TextureAssets["AimOverlay"]);
 
             Tanks = new Tank[2];
 
@@ -75,7 +76,11 @@ namespace Scorch
 
             GraphicsEngine.AddDrawableToField(Terrain);
 
-            TouchPanel.EnabledGestures = GestureType.Tap | GestureType.FreeDrag | GestureType.DragComplete;
+            HUD = new HeadsUpDisplay(GraphicsDevice, HudFont, TextureAssets["AimOverlay"]);
+            HUD.InputControls["terrainButton"].AddOnButtonPressedEventHandler(new GameEventHandler(RegenerateTerrain), this);
+            HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
+
+            TouchPanel.EnabledGestures = GestureType.FreeDrag | GestureType.DragComplete;
         }
 
         /// <summary>
@@ -114,6 +119,9 @@ namespace Scorch
         protected override void Update(GameTime gameTime)
         {
             var gesture = default(GestureSample);
+
+            var touchPanelState = TouchPanel.GetState();
+            HUD.Update(gameTime, touchPanelState);
 
             while(TouchPanel.IsGestureAvailable)
             {
@@ -171,6 +179,20 @@ namespace Scorch
                 currentPlayerTank.Power.ToString());
 
             base.Draw(gameTime);
+        }
+
+        private static void RegenerateTerrain(ScorchGame game)
+        {
+            game.Terrain.Regenerate(game.Tanks);
+        }
+
+        private static void NextPlayer(ScorchGame game)
+        {
+            game.CurrentPlayerIndex++;
+            if (game.CurrentPlayerIndex >= game.Tanks.Length)
+            {
+                game.CurrentPlayerIndex = 0;
+            }
         }
     }
 }

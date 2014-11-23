@@ -79,6 +79,8 @@
     <Compile Include="DataModels\FieldObject.cs" />
     <Compile Include="Graphics\HeadsUpDisplay.cs" />
     <Compile Include="Graphics\IDrawable.cs" />
+    <Compile Include="Graphics\InputControl.cs" />
+    <Compile Include="Graphics\GraphicsUtility.cs" />
     <Compile Include="LocalizedStrings.cs" />
     <Compile Include="GamePage.xaml.cs">
       <DependentUpon>GamePage.xaml</DependentUpon>

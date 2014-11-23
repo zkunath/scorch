@@ -47,6 +47,10 @@ namespace Scorch.DataModels
         public const float FarBack = 0.1f;
         public const float Back = 0.2f;
         public const float Middle = 0.5f;
-        public const float Front = 1f;
+        public const float Front = 0.6f;
+        public const float HudBack = 0.7f;
+        public const float HudMiddle = 0.8f;
+        public const float HudFront = 0.9f;
+        public const float HudTop = 1f;
     }
 }
