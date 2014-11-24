@@ -20,7 +20,6 @@ namespace Scorch.DataModels
             {
                 _BarrelAngleInDegrees = MathHelper.Clamp(value, 0, 180);
                 ChildObjects["barrel"].RotationInRadians = BarrelAngleInRadians;
-                ChildObjects["powerIndicator"].RotationInRadians = BarrelAngleInRadians;
             }
         }
         public float BarrelAngleInRadians
@@ -28,6 +27,13 @@ namespace Scorch.DataModels
             get
             {
                 return MathHelper.ToRadians(-BarrelAngleInDegrees);
+            }
+        }
+        public Vector2 BarrelOriginPosition
+        {
+            get
+            {
+                return Position + ChildObjects["barrel"].Position;
             }
         }
 
@@ -41,10 +47,6 @@ namespace Scorch.DataModels
             set
             {
                 _Power = MathHelper.Clamp(value, 0, 100);
-                // 190px = radius of aim indicator asset
-                // 128px = radius of power indicator asset
-                float scaleFactor = _Power / 100f * 190f / 128f;
-                ChildObjects["powerIndicator"].Scale = Vector2.One * scaleFactor;
             }
         }
 
@@ -53,7 +55,6 @@ namespace Scorch.DataModels
             GraphicsDevice graphicsDevice,
             Texture2D tankTexture,
             Texture2D barrelTexture,
-            Texture2D powerIndicatorTexture,
             Color color)
             : base(
                 "player_" + name,
@@ -62,7 +63,7 @@ namespace Scorch.DataModels
             )
         {
             Color = color;
-            Depth = DrawOrder.Front;
+            Depth = DrawOrder.TankMiddle;
             Texture = GraphicsUtility.ColorizeTexture(graphicsDevice, Texture, Color);
             var barrelPosition = new Vector2(16f, 4.5f);
 
@@ -72,22 +73,15 @@ namespace Scorch.DataModels
                 barrelPosition);
 
             barrel.Origin = new Vector2(1f, 3.5f);
-            barrel.Depth = DrawOrder.Middle;
+            barrel.Depth = DrawOrder.TankBack;
             barrel.RotationInRadians = BarrelAngleInRadians;
             ChildObjects.Add(barrel.Id, barrel);
 
-            var powerIndicator = new FieldObject(
-                "powerIndicator",
-                powerIndicatorTexture,
-                barrelPosition);
-
-            powerIndicator.Origin = new Vector2(0f, 17f);
-            powerIndicator.Depth = DrawOrder.Back;
-            powerIndicator.RotationInRadians = BarrelAngleInRadians;
-            powerIndicator.Visible = false;
-            ChildObjects.Add(powerIndicator.Id, powerIndicator);
-
             Power = 100;
+
+            PhysicsType |= Physics.PhysicsType.AffectedByGravity;
+            PhysicsType |= Physics.PhysicsType.CollidesWithTerrain;
+            PhysicsType |= Physics.PhysicsType.OnCollisionStop;
         }
 
         public void SetAngleAndPowerByTouchGesture(Vector2 aim, float minLength, float maxLength)

@@ -1,15 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Scorch.Graphics
 {
     public class GraphicsEngine
     {
         private GraphicsDevice GraphicsDevice;
-        private SpriteBatch SpriteBatch;
-        private Dictionary<string, IDrawable> FieldObjects;
+        private Dictionary<string, IDrawable> DrawableObjects;
 
         public Vector2 CameraSize { get; private set; }
         public Vector2 FieldSize { get; private set; }
@@ -17,27 +16,31 @@ namespace Scorch.Graphics
         public GraphicsEngine(GraphicsDevice graphicsDevice)
         {
             GraphicsDevice = graphicsDevice;
-            SpriteBatch = new SpriteBatch(graphicsDevice);
             CameraSize = new Vector2(graphicsDevice.Viewport.TitleSafeArea.Width, graphicsDevice.Viewport.TitleSafeArea.Height);
             FieldSize = CameraSize * 1f;
-            FieldObjects = new Dictionary<string, IDrawable>();
+            DrawableObjects = new Dictionary<string, IDrawable>();
         }
 
-        public void AddDrawableToField(IDrawable drawable)
+        public void AddDrawableObject(IDrawable drawable)
         {
-            this.FieldObjects.Add(drawable.Id, drawable);
+            this.DrawableObjects.Add(drawable.Id, drawable);
         }
 
-        public void DrawField()
+        public void RemoveDrawableObject(string id)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
-            SpriteBatch.Begin(SpriteSortMode.FrontToBack, BlendState.AlphaBlend);
+            this.DrawableObjects.Remove(id);
+        }
 
-            foreach (var drawable in FieldObjects.Values.Where(d => d.Visible))
+        public void DrawField(ScorchGame game)
+        {
+            // TODO: remove this debug option
+            const bool showPlayerFootprint = true;
+
+            foreach (var drawable in DrawableObjects.Values.Where(d => d.Visible))
             {
                 var drawablePosition = drawable.Position;
 
-                SpriteBatch.Draw(
+                game.SpriteBatch.Draw(
                     drawable.Texture,
                     position: drawablePosition,
                     scale: drawable.Scale,
@@ -45,9 +48,17 @@ namespace Scorch.Graphics
                     rotation: drawable.RotationInRadians,
                     depth: drawable.Depth);
 
+                if (showPlayerFootprint && drawable.Id.StartsWith("player"))
+                {
+                    game.SpriteBatch.Draw(
+                        game.TextureAssets["Green"],
+                        drawRectangle: ((Scorch.Physics.IPhysicsObject)drawable).Footprint,
+                        depth: Scorch.DataModels.DrawOrder.HudTop);
+                }
+
                 foreach (var child in drawable.Children.Where(c => c.Visible))
                 {
-                    SpriteBatch.Draw(
+                    game.SpriteBatch.Draw(
                         child.Texture,
                         position: drawablePosition + child.Position,
                         scale: child.Scale,
@@ -56,8 +67,6 @@ namespace Scorch.Graphics
                         depth: child.Depth);
                 }
             }
-
-            SpriteBatch.End();
         }
     }
 }

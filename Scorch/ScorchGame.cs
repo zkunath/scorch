@@ -1,11 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input.Touch;
 using Scorch.DataModels;
 using Scorch.Graphics;
+using Scorch.Input;
+using Scorch.Physics;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Scorch
 {
@@ -15,19 +17,27 @@ namespace Scorch
     public class ScorchGame : Game
     {
         public delegate void GameEventHandler(ScorchGame game);
-        
-        GraphicsDeviceManager GraphicsDeviceManager;
-        GraphicsEngine GraphicsEngine;
-        HeadsUpDisplay HUD;
-        Dictionary<string, Texture2D> TextureAssets;
-        Random Randomizer;
+        public GraphicsDeviceManager GraphicsDeviceManager;
+        public SpriteBatch SpriteBatch;
+        public GraphicsEngine GraphicsEngine;
+        public PhysicsEngine PhysicsEngine;
+        public InputManager InputManager;
+        public HeadsUpDisplay HUD;
+        public Dictionary<string, Texture2D> TextureAssets;
+        public Random Randomizer;
+        public Terrain Terrain;
+        public Tank[] Tanks;
+        public SpriteFont HudFont;
+        public int CurrentPlayerIndex;
+        public int ProjectileId;
 
-        Terrain Terrain;
-        Tank[] Tanks;
-
-        SpriteFont HudFont;
-
-        int CurrentPlayerIndex = 0;
+        public Tank CurrentPlayerTank
+        {
+            get
+            {
+                return Tanks[CurrentPlayerIndex];
+            }
+        }
 
         public ScorchGame()
         {
@@ -43,28 +53,18 @@ namespace Scorch
         /// </summary>
         protected override void Initialize()
         {
+            const int numPlayers = 2;
+
             base.Initialize();
             GraphicsEngine = new GraphicsEngine(GraphicsDevice);
+            SpriteBatch = new SpriteBatch(GraphicsDevice);
+            InputManager = new InputManager();
 
-            Tanks = new Tank[2];
-
-            Tanks[0] = new Tank(
-                "0",
-                GraphicsDevice,
-                TextureAssets["Tank"],
-                TextureAssets["TankBarrel"],
-                TextureAssets["PowerIndicator"],
-                Color.Blue);
-            GraphicsEngine.AddDrawableToField(Tanks[0]);
-
-            Tanks[1] = new Tank(
-                "1",
-                GraphicsDevice,
-                TextureAssets["Tank"],
-                TextureAssets["TankBarrel"],
-                TextureAssets["PowerIndicator"],
-                Color.Red);
-            GraphicsEngine.AddDrawableToField(Tanks[1]);
+            Tanks = new Tank[numPlayers];
+            for (int i = 0; i < numPlayers; i++)
+            {
+                AddPlayer(i);
+            }
 
             Terrain = new Terrain(
                 Randomizer,
@@ -73,14 +73,24 @@ namespace Scorch
                 (int)GraphicsEngine.FieldSize.Y);
 
             Terrain.Regenerate(Tanks);
+            GraphicsEngine.AddDrawableObject(Terrain);
+            PhysicsEngine = new PhysicsEngine(Terrain);
+            for (int i = 0; i < numPlayers; i++)
+            {
+                GraphicsEngine.AddDrawableObject(Tanks[i]);
+                PhysicsEngine.AddPhysicsObject(Tanks[i]);
+            }
 
-            GraphicsEngine.AddDrawableToField(Terrain);
-
-            HUD = new HeadsUpDisplay(GraphicsDevice, HudFont, TextureAssets["AimOverlay"]);
+            HUD = new HeadsUpDisplay(
+                GraphicsDevice,
+                HudFont,
+                TextureAssets["AimOverlay"],
+                TextureAssets["PowerIndicator"]);
             HUD.InputControls["terrainButton"].AddOnButtonPressedEventHandler(new GameEventHandler(RegenerateTerrain), this);
+            HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
             HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
 
-            TouchPanel.EnabledGestures = GestureType.FreeDrag | GestureType.DragComplete;
+            TouchPanel.EnabledGestures = GestureType.None;
         }
 
         /// <summary>
@@ -118,47 +128,9 @@ namespace Scorch
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            var gesture = default(GestureSample);
-
-            var touchPanelState = TouchPanel.GetState();
-            HUD.Update(gameTime, touchPanelState);
-
-            while(TouchPanel.IsGestureAvailable)
-            {
-                gesture = TouchPanel.ReadGesture();
-                switch (gesture.GestureType)
-                {
-                    case GestureType.Tap:
-                        Terrain.Regenerate(Tanks);
-                        break;
-                    case GestureType.FreeDrag:
-                        if (HUD.Mode == HudMode.Aim)
-                        {
-                            if (HUD.AimOverlayPosition == -Vector2.One)
-                            {
-                                //HUD.AimOverlayPosition = gesture.Position;
-                                HUD.AimOverlayPosition = Tanks[CurrentPlayerIndex].Position + Tanks[CurrentPlayerIndex].ChildObjects["barrel"].Position;
-                                Tanks[CurrentPlayerIndex].ChildObjects["powerIndicator"].Visible = true;
-                            }
-                            else
-                            {
-                                var aim = gesture.Position - HUD.AimOverlayPosition;
-                                Tanks[CurrentPlayerIndex].SetAngleAndPowerByTouchGesture(
-                                    aim,
-                                    GraphicsEngine.CameraSize.Y / 32,
-                                    GraphicsEngine.CameraSize.Y / 4);
-                            }
-                        }
-                        break;
-                    case GestureType.DragComplete:
-                        if (HUD.Mode == HudMode.Aim)
-                        {
-                            HUD.AimOverlayPosition = -Vector2.One;
-                            Tanks[CurrentPlayerIndex].ChildObjects["powerIndicator"].Visible = false;
-                        }
-                        break;
-                }
-            }
+            PhysicsEngine.Update(this, gameTime);
+            InputManager.Update(TouchPanel.GetState());
+            HUD.Update(this, gameTime, InputManager.TouchInputs);
 
             base.Update(gameTime);
         }
@@ -169,16 +141,25 @@ namespace Scorch
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsEngine.DrawField();
+            GraphicsDevice.Clear(Color.CornflowerBlue);
+            SpriteBatch.Begin(SpriteSortMode.FrontToBack, BlendState.AlphaBlend);
 
-            Tank currentPlayerTank = Tanks[CurrentPlayerIndex];
+            GraphicsEngine.DrawField(this);
+            HUD.Draw(this);
 
-            HUD.Draw(
-                currentPlayerTank.Id,
-                currentPlayerTank.BarrelAngleInDegrees.ToString(),
-                currentPlayerTank.Power.ToString());
+            SpriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void AddPlayer(int i)
+        {
+            Tanks[i] = new Tank(
+                i.ToString(),
+                GraphicsDevice,
+                TextureAssets["Tank"],
+                TextureAssets["TankBarrel"],
+                Color.Black);
         }
 
         private static void RegenerateTerrain(ScorchGame game)
@@ -193,6 +174,28 @@ namespace Scorch
             {
                 game.CurrentPlayerIndex = 0;
             }
+        }
+
+        private static void Fire(ScorchGame game)
+        {
+            const float velocityPowerFactor = 8f;
+
+            var projectile = new FieldObject(
+                "projectile" + game.ProjectileId++,
+                game.TextureAssets["SpikyCircle"],
+                game.CurrentPlayerTank.BarrelOriginPosition);
+
+            projectile.Origin = projectile.Size / 2f;
+            projectile.Scale = Vector2.One * 0.1f;
+            projectile.Velocity = game.CurrentPlayerTank.Power * velocityPowerFactor * new Vector2(
+                (float)Math.Cos(game.CurrentPlayerTank.BarrelAngleInRadians),
+                (float)Math.Sin(game.CurrentPlayerTank.BarrelAngleInRadians));
+            projectile.PhysicsType |= PhysicsType.AffectedByGravity;
+            projectile.PhysicsType |= PhysicsType.CollidesWithTerrain;
+            projectile.PhysicsType |= PhysicsType.OnCollisionExplode;
+
+            game.GraphicsEngine.AddDrawableObject(projectile);
+            game.PhysicsEngine.AddPhysicsObject(projectile);
         }
     }
 }

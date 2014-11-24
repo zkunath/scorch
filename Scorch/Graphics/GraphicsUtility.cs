@@ -64,6 +64,31 @@ namespace Scorch.Graphics
             texture.SetData(textureData);
             return texture;
         }
+
+        public static Color[] GetTextureSample(Texture2D texture, Rectangle sampleRectangle)
+        {
+            var textureData = new Color[sampleRectangle.Width * sampleRectangle.Height];
+
+            texture.GetData(
+                0,
+                sampleRectangle,
+                textureData,
+                0,
+                textureData.Length);
+
+            return textureData;
+        }
+
+        public static void SetTextureSample(Texture2D texture, Rectangle sampleRectangle, Color[] textureData)
+        {
+            texture.SetData(
+                0,
+                sampleRectangle,
+                textureData,
+                0,
+                textureData.Length);
+        }
+
         public static Texture2D ColorizeTexture(GraphicsDevice graphicsDevice, Texture2D texture, Color color)
         {
             Color[] textureData = new Color[texture.Width * texture.Height];

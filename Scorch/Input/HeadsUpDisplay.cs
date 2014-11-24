@@ -1,29 +1,35 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input.Touch;
 using Scorch.DataModels;
+using Scorch.Graphics;
 using System.Collections.Generic;
+using System.Linq;
 
-namespace Scorch.Graphics
+namespace Scorch.Input
 {
     public class HeadsUpDisplay
     {
         private GraphicsDevice GraphicsDevice;
-        private SpriteBatch SpriteBatch;
         private SpriteFont Font;
         private Texture2D AimOverlayTexture;
+        private Texture2D PowerIndicatorTexture;
         private Texture2D BackgroundTexture;
         private Rectangle BackgroundFootprint;
         private Vector2 Position;
         private int Width;
         private int Height;
-        private const string HudFormat = "{0}\nangle: {1}\npower: {2}";
+        private const string HudFormat = "HUD mode: {0}\n{1}\nangle: {2}\npower: {3}";
         
         public string Mode { get; set; }
         public Vector2 AimOverlayPosition { get; set; }
+        public int AimTouchId { get; set; }
         public Dictionary<string, InputControl> InputControls { get; private set; }
 
-        public HeadsUpDisplay(GraphicsDevice graphicsDevice, SpriteFont font, Texture2D aimOverlayTexture)
+        public HeadsUpDisplay(
+            GraphicsDevice graphicsDevice,
+            SpriteFont font,
+            Texture2D aimOverlayTexture,
+            Texture2D powerIndicatorTexture)
         {
             const float backgroundHeightFactor = 0.125f;
             const float buttonWidthFactor = 0.25f;
@@ -34,7 +40,7 @@ namespace Scorch.Graphics
             GraphicsDevice = graphicsDevice;
             Font = font;
             AimOverlayTexture = aimOverlayTexture;
-            SpriteBatch = new SpriteBatch(graphicsDevice);
+            PowerIndicatorTexture = powerIndicatorTexture;
             Position = new Vector2(32f, 32f);
             Mode = HudMode.Aim;
             AimOverlayPosition = -Vector2.One;
@@ -71,46 +77,91 @@ namespace Scorch.Graphics
                 Align.Right | Align.CenterY);
         }
 
-        public void Update(GameTime gameTime, TouchCollection touchPanelState)
+        public void Update(ScorchGame game, GameTime gameTime, Dictionary<int, TouchInput> touchInputs)
         {
             foreach (var inputControl in InputControls.Values)
             {
-                inputControl.Update(gameTime, touchPanelState);
+                inputControl.Update(gameTime, touchInputs);
+            }
+
+            if (Mode == HudMode.Aim)
+            {
+                if (AimTouchId == 0)
+                {
+                    var newAimTouch = touchInputs.Values.FirstOrDefault(t => !t.LatestIsHandled);
+                    if (newAimTouch != null)
+                    {
+                        newAimTouch.LatestIsHandled = true;
+                        AimTouchId = newAimTouch.Id;
+                    }
+                }
+
+                if (AimTouchId != 0)
+                {
+                    if (touchInputs.ContainsKey(AimTouchId))
+                    {
+                        touchInputs[AimTouchId].LatestIsHandled = true;
+
+                        AimOverlayPosition = game.CurrentPlayerTank.BarrelOriginPosition;
+
+                        var aim = touchInputs[AimTouchId].Latest.Position - AimOverlayPosition;
+                        game.CurrentPlayerTank.SetAngleAndPowerByTouchGesture(
+                            aim,
+                            Height / 32,
+                            Height / 4);
+                    }
+                    else
+                    {
+                        AimTouchId = 0;
+                    }
+                }
             }
         }
 
-        public void Draw(params string[] args)
+        public void Draw(ScorchGame game)
         {
-            
-            SpriteBatch.Begin(SpriteSortMode.FrontToBack, BlendState.AlphaBlend);
-
-            SpriteBatch.DrawString(
+            game.SpriteBatch.DrawString(
                 Font,
-                "HUD mode: " + Mode + "\n" + string.Format(HudFormat, args),
+                string.Format(
+                    HudFormat,
+                    Mode,
+                    game.CurrentPlayerTank.Id,
+                    game.CurrentPlayerTank.BarrelAngleInDegrees.ToString(),
+                    game.CurrentPlayerTank.Power.ToString()),
                 Position,
                 Color.Black);
 
-            SpriteBatch.Draw(
+            game.SpriteBatch.Draw(
                 BackgroundTexture,
                 drawRectangle: BackgroundFootprint,
                 depth: DrawOrder.HudBack);
 
             foreach (var inputControl in InputControls.Values)
             {
-                inputControl.Draw(SpriteBatch);
+                inputControl.Draw(game.SpriteBatch);
             }
 
-            if (AimOverlayPosition != -Vector2.One)
+            if (AimTouchId != 0)
             {
-                SpriteBatch.Draw(
+                game.SpriteBatch.Draw(
                     AimOverlayTexture,
                     position: AimOverlayPosition,
                     origin: new Vector2(96, 0),
                     scale: Vector2.One * 2f,
-                    depth: DrawOrder.Front);
-            }
+                    depth: DrawOrder.TankMiddle);
 
-            SpriteBatch.End();
+                // 190px = radius of aim indicator asset
+                // 128px = radius of power indicator asset
+                float scaleFactor = game.CurrentPlayerTank.Power / 100f * 190f / 128f;
+
+                game.SpriteBatch.Draw(
+                    PowerIndicatorTexture,
+                    position: game.CurrentPlayerTank.BarrelOriginPosition,
+                    scale: Vector2.One * scaleFactor,
+                    origin: new Vector2(0f, 17f),
+                    rotation: game.CurrentPlayerTank.BarrelAngleInRadians,
+                    depth: DrawOrder.Back);
+            }
         }
 
         private void AddInputControl(string id, string text, Color color, Vector2 size, Align align)

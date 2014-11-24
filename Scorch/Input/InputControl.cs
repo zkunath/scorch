@@ -1,10 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input.Touch;
 using Scorch.DataModels;
-using System;
+using Scorch.Graphics;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace Scorch.Graphics
+namespace Scorch.Input
 {
     public class InputControl
     {
@@ -14,7 +15,9 @@ namespace Scorch.Graphics
         private SpriteFont Font;
         private Texture2D BackgroundTexture;
         private Texture2D ActiveOverlayTexture;
+        private Texture2D PressedOverlayTexture;
         private bool Active;
+        private int ActiveTouchInputId;
         private bool NeedsToProcessButtonPressed;
         private event ScorchGame.GameEventHandler ButtonPressed;
         private ScorchGame Game;
@@ -26,8 +29,10 @@ namespace Scorch.Graphics
             Color color,
             Rectangle footprint)
         {
+            var activeColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
             BackgroundTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, color);
-            ActiveOverlayTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            ActiveOverlayTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, activeColor);
+            PressedOverlayTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, Color.Lerp(activeColor, Color.White, 0.5f));
             Footprint = footprint;
             TextPosition = GraphicsUtility.AlignText(footprint, font, text, Align.Center);
             Text = text;
@@ -40,34 +45,37 @@ namespace Scorch.Graphics
             Game = game;
         }
 
-        public void Update(GameTime gameTime, TouchCollection touchPanelState)
+        public void Update(GameTime gameTime, Dictionary<int, TouchInput> touchInputs)
         {
             if (NeedsToProcessButtonPressed)
             {
-                if (ButtonPressed != null && Game != null)
-                {
-                    ButtonPressed(Game);
-                }
-
-                NeedsToProcessButtonPressed = false;
+                ProcessButtonPressed();
             }
 
-            bool anyTouchOnFootprint = false;
-
-            foreach (TouchLocation touchLocation in touchPanelState)
+            if (ActiveTouchInputId == 0)
             {
-                if (Footprint.Contains(touchLocation.Position))
+                var newTouchOnMe = touchInputs.Values.FirstOrDefault(t => Footprint.Contains(t.Origin.Position) && !t.LatestIsHandled);
+                if (newTouchOnMe != null)
                 {
-                    anyTouchOnFootprint = true;
-
-                    if (touchLocation.State == TouchLocationState.Pressed)
-                    {
-                        NeedsToProcessButtonPressed = true;
-                    }
+                    ActiveTouchInputId = newTouchOnMe.Id;
+                    newTouchOnMe.LatestIsHandled = true;
                 }
             }
 
-            Active = anyTouchOnFootprint;
+            if (ActiveTouchInputId != 0)
+            {
+                if (touchInputs.ContainsKey(ActiveTouchInputId))
+                {
+                    touchInputs[ActiveTouchInputId].LatestIsHandled = true;
+                    Active = Footprint.Contains(touchInputs[ActiveTouchInputId].Latest.Position);
+                }
+                else
+                {
+                    NeedsToProcessButtonPressed = Active;
+                    Active = false;
+                    ActiveTouchInputId = 0;
+                }
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -77,7 +85,14 @@ namespace Scorch.Graphics
                 drawRectangle: Footprint,
                 depth: DrawOrder.HudMiddle);
 
-            if (Active)
+            if (NeedsToProcessButtonPressed)
+            {
+                spriteBatch.Draw(
+                    PressedOverlayTexture,
+                    drawRectangle: Footprint,
+                    depth: DrawOrder.HudTop);
+            }
+            else if (Active)
             {
                 spriteBatch.Draw(
                     ActiveOverlayTexture,
@@ -95,6 +110,16 @@ namespace Scorch.Graphics
                 1f,
                 SpriteEffects.None,
                 DrawOrder.HudFront);
+        }
+
+        private void ProcessButtonPressed()
+        {
+            if (ButtonPressed != null && Game != null)
+            {
+                ButtonPressed(Game);
+            }
+
+            NeedsToProcessButtonPressed = false;
         }
     }
 }
