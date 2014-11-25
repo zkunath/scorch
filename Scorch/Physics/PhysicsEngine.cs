@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Scorch;
 using Scorch.DataModels;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,6 @@ namespace Scorch.Physics
 {
     public class PhysicsEngine
     {
-        const float GravityAcceleration = 300;
         private Dictionary<string, IPhysicsObject> PhysicsObjects;
         private Terrain Terrain;
 
@@ -30,7 +30,6 @@ namespace Scorch.Physics
 
         public void Update(ScorchGame game, GameTime gameTime)
         {
-            const int explosionDurationInMilliseconds = 50;
             float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var collisionObjectIds = new HashSet<string>();
             var removeObjectIds = new HashSet<string>();
@@ -39,7 +38,7 @@ namespace Scorch.Physics
             foreach (var physicsObject in PhysicsObjects.Values)
             {
                 Vector2 velocityDeltaFromGravity = CanFall(physicsObject, Terrain) ?
-                    new Vector2(0, GravityAcceleration) * elapsedSeconds :
+                    new Vector2(0, Constants.Physics.GravityAcceleration) * elapsedSeconds :
                     Vector2.Zero;
                 physicsObject.Velocity += velocityDeltaFromGravity;
 
@@ -77,10 +76,13 @@ namespace Scorch.Physics
                         game.TextureAssets["SpikyCircle"],
                         physicsObject.Position);
                     explosion.Origin = explosion.Size / 2f;
-                    explosion.TimeToLive = TimeSpan.FromMilliseconds(explosionDurationInMilliseconds);
-                    explosion.Depth = DrawOrder.TankFront;
+                    explosion.TimeToLive = TimeSpan.FromMilliseconds(Constants.Physics.ExplosionDurationInMilliseconds);
+                    explosion.Depth = Constants.Graphics.DrawOrder.TankFront;
+                    explosion.Scale = Vector2.One * 1.05f;
+                    Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Scorch);
+                    explosion.Scale = Vector2.One;
+                    Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Destroy);
                     addFieldObjects.Add(explosion);
-                    Terrain.DestroyTerrainWithDrawable(explosion);
                 }
                 else if (physicsObject.PhysicsType.HasFlag(PhysicsType.OnCollisionStop))
                 {
@@ -107,8 +109,6 @@ namespace Scorch.Physics
 
         private static bool CollidesWithTerrain(IPhysicsObject physicsObject, Vector2 previousPosition, Terrain terrain)
         {
-            const float minDistancePerStep = 3f;
-            
             if (physicsObject.Velocity == Vector2.Zero)
             {
                 return false;
@@ -123,7 +123,7 @@ namespace Scorch.Physics
             var nextPosition = physicsObject.Position;
             var distance = Vector2.Distance(previousPosition, nextPosition);
             var totalPositionDelta = nextPosition - previousPosition;
-            float numSteps = (float)Math.Ceiling(distance / minDistancePerStep);
+            float numSteps = (float)Math.Ceiling(distance / Constants.Physics.CollisionDetectionMinDistancePerStep);
             for (float i = 1; i <= numSteps; i++)
             {
                 physicsObject.Position = previousPosition + totalPositionDelta * i / numSteps;

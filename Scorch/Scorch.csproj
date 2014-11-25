@@ -73,6 +73,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Constants.cs" />
     <Compile Include="Physics\IPhysicsObject.cs" />
     <Compile Include="Physics\PhysicsEngine.cs" />
     <Compile Include="Input\InputManager.cs" />

@@ -109,6 +109,52 @@ namespace Scorch.Graphics
             colorizedTexture.SetData(textureData);
             return colorizedTexture;
         }
+
+        public static Color RandomizedFade(Random randomizer, Color from, Color to, float ratio, float randomization)
+        {
+            var gradientColorData = new Color(from.ToVector3() + (to.ToVector3() - from.ToVector3()) * ratio);
+            return RandomizeColor(randomizer, gradientColorData, randomization);
+        }
+
+        public static Color RandomizeColor(Random randomizer, Color color, float randomization)
+        {
+            var randomizedColorDataModifier = new Vector3(
+                (float)randomizer.NextDouble() * randomization - randomization / 2,
+                (float)randomizer.NextDouble() * randomization - randomization / 2,
+                (float)randomizer.NextDouble() * randomization - randomization / 2);
+
+            return new Color(color.ToVector3() + randomizedColorDataModifier);
+        }
+
+        public static Color ChooseRandomColor(Random randomizer, float randomization)
+        {
+            float primaryMin = 1f - randomization;
+            float primaryMax = 1f;
+            float secondaryMin = (1f - randomization) / 2f;
+            float secondaryMax = 1f - secondaryMin;
+            float tertiaryMin = 0f;
+            float tertiaryMax = randomization;
+
+            float primary = primaryMin + (float)(randomizer.NextDouble() * (primaryMax - primaryMin));
+            float secondary = secondaryMin + (float)(randomizer.NextDouble() * (secondaryMax - secondaryMin));
+            float tertiary = tertiaryMin + (float)(randomizer.NextDouble() * (tertiaryMax - tertiaryMin));
+
+            int combo = randomizer.Next(6);
+            return new Color(
+                combo == 0 || combo == 1 ? primary : (combo == 2 || combo == 3 ? secondary : tertiary),
+                combo == 2 || combo == 4 ? primary : (combo == 0 || combo == 5 ? secondary : tertiary),
+                combo == 3 || combo == 5 ? primary : (combo == 1 || combo == 4 ? secondary : tertiary));
+        }
+
+        public static Color Whiten(Color color, float whiteness)
+        {
+            return Color.Lerp(color, Color.White, whiteness);
+        }
+
+        public static Color Blacken(Color color, float blackness)
+        {
+            return Color.Lerp(color, Color.Black, blackness);
+        }
     }
 
     [Flags]

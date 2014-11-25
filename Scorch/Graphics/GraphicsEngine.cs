@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Scorch;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -33,9 +34,6 @@ namespace Scorch.Graphics
 
         public void DrawField(ScorchGame game)
         {
-            // TODO: remove this debug option
-            const bool showPlayerFootprint = true;
-
             foreach (var drawable in DrawableObjects.Values.Where(d => d.Visible))
             {
                 var drawablePosition = drawable.Position;
@@ -48,12 +46,12 @@ namespace Scorch.Graphics
                     rotation: drawable.RotationInRadians,
                     depth: drawable.Depth);
 
-                if (showPlayerFootprint && drawable.Id.StartsWith("player"))
+                if (Constants.Debug.ShowPlayerFootprint && drawable.Id.StartsWith("player"))
                 {
                     game.SpriteBatch.Draw(
                         game.TextureAssets["Green"],
                         drawRectangle: ((Scorch.Physics.IPhysicsObject)drawable).Footprint,
-                        depth: Scorch.DataModels.DrawOrder.HudTop);
+                        depth: Constants.Graphics.DrawOrder.HudTop);
                 }
 
                 foreach (var child in drawable.Children.Where(c => c.Visible))

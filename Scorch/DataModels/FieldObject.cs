@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Scorch;
 using Scorch.Physics;
 using System;
 using System.Collections.Generic;
@@ -56,22 +57,9 @@ namespace Scorch.DataModels
             Origin = Vector2.Zero;
             RotationInRadians = 0f;
             Visible = true;
-            Depth = DrawOrder.TankMiddle;
+            Depth = Constants.Graphics.DrawOrder.TankMiddle;
             TimeToLive = null;
             ChildObjects = new Dictionary<string, FieldObject>();
         }
-    }
-
-    public struct DrawOrder
-    {
-        public const float FarBack = 0.1f;
-        public const float Back = 0.2f;
-        public const float TankBack = 0.3f;
-        public const float TankMiddle = 0.4f;
-        public const float TankFront = 0.5f;
-        public const float HudBack = 0.7f;
-        public const float HudMiddle = 0.8f;
-        public const float HudFront = 0.9f;
-        public const float HudTop = 1f;
     }
 }

@@ -7,7 +7,9 @@ namespace Scorch.DataModels
 {
     public class Tank : FieldObject
     {
-        private Color Color;
+        private GraphicsDevice GraphicsDevice;
+        private Texture2D TankTexture;
+        private Texture2D BarrelTexture;
 
         private int _BarrelAngleInDegrees;
         public int BarrelAngleInDegrees
@@ -62,26 +64,35 @@ namespace Scorch.DataModels
                 Vector2.Zero
             )
         {
-            Color = color;
-            Depth = DrawOrder.TankMiddle;
-            Texture = GraphicsUtility.ColorizeTexture(graphicsDevice, Texture, Color);
+            GraphicsDevice = graphicsDevice;
+            Depth = Constants.Graphics.DrawOrder.TankMiddle;
+            TankTexture = tankTexture;
+            BarrelTexture = barrelTexture;
             var barrelPosition = new Vector2(16f, 4.5f);
 
             var barrel = new FieldObject(
                 "barrel",
-                GraphicsUtility.ColorizeTexture(graphicsDevice, barrelTexture, Color),
+                barrelTexture,
                 barrelPosition);
 
             barrel.Origin = new Vector2(1f, 3.5f);
-            barrel.Depth = DrawOrder.TankBack;
+            barrel.Depth = Constants.Graphics.DrawOrder.TankBack;
             barrel.RotationInRadians = BarrelAngleInRadians;
             ChildObjects.Add(barrel.Id, barrel);
+
+            //SetColor(color);
 
             Power = 100;
 
             PhysicsType |= Physics.PhysicsType.AffectedByGravity;
             PhysicsType |= Physics.PhysicsType.CollidesWithTerrain;
             PhysicsType |= Physics.PhysicsType.OnCollisionStop;
+        }
+
+        public void SetColor(Color color)
+        {
+            Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, TankTexture, color);
+            ChildObjects["barrel"].Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, BarrelTexture, color);
         }
 
         public void SetAngleAndPowerByTouchGesture(Vector2 aim, float minLength, float maxLength)

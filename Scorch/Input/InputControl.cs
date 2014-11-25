@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Scorch;
 using Scorch.DataModels;
 using Scorch.Graphics;
 using System.Collections.Generic;
@@ -83,21 +84,21 @@ namespace Scorch.Input
             spriteBatch.Draw(
                 BackgroundTexture,
                 drawRectangle: Footprint,
-                depth: DrawOrder.HudMiddle);
+                depth: Constants.Graphics.DrawOrder.HudMiddle);
 
             if (NeedsToProcessButtonPressed)
             {
                 spriteBatch.Draw(
                     PressedOverlayTexture,
                     drawRectangle: Footprint,
-                    depth: DrawOrder.HudTop);
+                    depth: Constants.Graphics.DrawOrder.HudTop);
             }
             else if (Active)
             {
                 spriteBatch.Draw(
                     ActiveOverlayTexture,
                     drawRectangle: Footprint,
-                    depth: DrawOrder.HudTop);
+                    depth: Constants.Graphics.DrawOrder.HudTop);
             }
 
             spriteBatch.DrawString(
@@ -109,7 +110,7 @@ namespace Scorch.Input
                 Vector2.Zero,
                 1f,
                 SpriteEffects.None,
-                DrawOrder.HudFront);
+                Constants.Graphics.DrawOrder.HudFront);
         }
 
         private void ProcessButtonPressed()

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Scorch;
 using Scorch.DataModels;
 using Scorch.Graphics;
 using System.Collections.Generic;
@@ -18,7 +19,6 @@ namespace Scorch.Input
         private Vector2 Position;
         private int Width;
         private int Height;
-        private const string HudFormat = "HUD mode: {0}\n{1}\nangle: {2}\npower: {3}";
         
         public string Mode { get; set; }
         public Vector2 AimOverlayPosition { get; set; }
@@ -31,9 +31,6 @@ namespace Scorch.Input
             Texture2D aimOverlayTexture,
             Texture2D powerIndicatorTexture)
         {
-            const float backgroundHeightFactor = 0.125f;
-            const float buttonWidthFactor = 0.25f;
-
             Width = graphicsDevice.Viewport.TitleSafeArea.Width;
             Height = graphicsDevice.Viewport.TitleSafeArea.Height;
 
@@ -46,14 +43,14 @@ namespace Scorch.Input
             AimOverlayPosition = -Vector2.One;
             
             BackgroundTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, new Color(0f, 0f, 0f, 0.25f));
-            int backgroundHeight = (int)(Height * backgroundHeightFactor);
+            int backgroundHeight = (int)(Height * Constants.HUD.BackgroundHeightFactor);
             BackgroundFootprint = GraphicsUtility.AlignRectangle(
                 GraphicsDevice.Viewport.TitleSafeArea,
                 new Vector2(Width, backgroundHeight),
                 Align.Left | Align.Bottom);
 
             InputControls = new Dictionary<string, InputControl>();
-            var buttonSize = new Vector2((int)(Width * buttonWidthFactor), backgroundHeight);
+            var buttonSize = new Vector2((int)(Width * Constants.HUD.ButtonWidthFactor), backgroundHeight);
 
             AddInputControl(
                 "playerButton",
@@ -123,7 +120,7 @@ namespace Scorch.Input
             game.SpriteBatch.DrawString(
                 Font,
                 string.Format(
-                    HudFormat,
+                    "HUD mode: {0}\n{1}\nangle: {2}\npower: {3}",
                     Mode,
                     game.CurrentPlayerTank.Id,
                     game.CurrentPlayerTank.BarrelAngleInDegrees.ToString(),
@@ -134,7 +131,7 @@ namespace Scorch.Input
             game.SpriteBatch.Draw(
                 BackgroundTexture,
                 drawRectangle: BackgroundFootprint,
-                depth: DrawOrder.HudBack);
+                depth: Constants.Graphics.DrawOrder.HudBack);
 
             foreach (var inputControl in InputControls.Values)
             {
@@ -148,7 +145,7 @@ namespace Scorch.Input
                     position: AimOverlayPosition,
                     origin: new Vector2(96, 0),
                     scale: Vector2.One * 2f,
-                    depth: DrawOrder.TankMiddle);
+                    depth: Constants.Graphics.DrawOrder.TankMiddle);
 
                 // 190px = radius of aim indicator asset
                 // 128px = radius of power indicator asset
@@ -160,7 +157,7 @@ namespace Scorch.Input
                     scale: Vector2.One * scaleFactor,
                     origin: new Vector2(0f, 17f),
                     rotation: game.CurrentPlayerTank.BarrelAngleInRadians,
-                    depth: DrawOrder.Back);
+                    depth: Constants.Graphics.DrawOrder.Back);
             }
         }
 
@@ -178,12 +175,11 @@ namespace Scorch.Input
 
             InputControls.Add(id, inputControl);
         }
-    }
-
-    public struct HudMode
-    {
-        public const string Explore = "Explore";
-        public const string Aim = "Aim";
-        public const string Locked = "Locked";
+        private static class HudMode
+        {
+            public const string Explore = "Explore";
+            public const string Aim = "Aim";
+            public const string Locked = "Locked";
+        }
     }
 }

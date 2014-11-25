@@ -7,6 +7,7 @@ using Scorch.Input;
 using Scorch.Physics;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 
 namespace Scorch
@@ -16,21 +17,25 @@ namespace Scorch
     /// </summary>
     public class ScorchGame : Game
     {
-        public delegate void GameEventHandler(ScorchGame game);
-        public GraphicsDeviceManager GraphicsDeviceManager;
+        // graphics
         public SpriteBatch SpriteBatch;
         public GraphicsEngine GraphicsEngine;
-        public PhysicsEngine PhysicsEngine;
+        public GraphicsDeviceManager GraphicsDeviceManager;
+
+        // content
+        public Dictionary<string, Texture2D> TextureAssets;
+        public SpriteFont HudFont;
+
+        // input
         public InputManager InputManager;
         public HeadsUpDisplay HUD;
-        public Dictionary<string, Texture2D> TextureAssets;
-        public Random Randomizer;
+        public delegate void GameEventHandler(ScorchGame game);
+
+        // data models
         public Terrain Terrain;
         public Tank[] Tanks;
-        public SpriteFont HudFont;
         public int CurrentPlayerIndex;
         public int ProjectileId;
-
         public Tank CurrentPlayerTank
         {
             get
@@ -38,6 +43,10 @@ namespace Scorch
                 return Tanks[CurrentPlayerIndex];
             }
         }
+
+        // other
+        public PhysicsEngine PhysicsEngine;
+        public Random Randomizer;
 
         public ScorchGame()
         {
@@ -53,13 +62,12 @@ namespace Scorch
         /// </summary>
         protected override void Initialize()
         {
-            const int numPlayers = 2;
-
             base.Initialize();
             GraphicsEngine = new GraphicsEngine(GraphicsDevice);
             SpriteBatch = new SpriteBatch(GraphicsDevice);
             InputManager = new InputManager();
 
+            var numPlayers = Constants.Game.NumPlayers;
             Tanks = new Tank[numPlayers];
             for (int i = 0; i < numPlayers; i++)
             {
@@ -178,8 +186,6 @@ namespace Scorch
 
         private static void Fire(ScorchGame game)
         {
-            const float velocityPowerFactor = 8f;
-
             var projectile = new FieldObject(
                 "projectile" + game.ProjectileId++,
                 game.TextureAssets["SpikyCircle"],
@@ -187,7 +193,7 @@ namespace Scorch
 
             projectile.Origin = projectile.Size / 2f;
             projectile.Scale = Vector2.One * 0.1f;
-            projectile.Velocity = game.CurrentPlayerTank.Power * velocityPowerFactor * new Vector2(
+            projectile.Velocity = game.CurrentPlayerTank.Power * Constants.Physics.PlayerPowerVelocityFactor * new Vector2(
                 (float)Math.Cos(game.CurrentPlayerTank.BarrelAngleInRadians),
                 (float)Math.Sin(game.CurrentPlayerTank.BarrelAngleInRadians));
             projectile.PhysicsType |= PhysicsType.AffectedByGravity;
