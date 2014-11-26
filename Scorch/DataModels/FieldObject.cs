@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace Scorch.DataModels
 {
-    public class FieldObject : Scorch.Graphics.IDrawable, Scorch.Physics.IPhysicsObject
+    public class FieldObject : Scorch.Graphics.IDrawable, IPhysicsObject
     {
         public string Id { get; set; }
         public Texture2D Texture { get; set; }
@@ -20,6 +20,7 @@ namespace Scorch.DataModels
         public float Depth { get; set; }
         public Vector2 Velocity { get; set; }
         public TimeSpan? TimeToLive { get; set; }
+        public PhysicalProperties PhysicalProperties { get; set; }
         public PhysicsType PhysicsType { get; set; }
         public Rectangle Footprint
         {
@@ -27,8 +28,8 @@ namespace Scorch.DataModels
             {
                 var scaledSize = Size * Scale;
                 return new Rectangle(
-                    (int)(Position.X - Origin.X),
-                    (int)(Position.Y - Origin.Y),
+                    (int)(Position.X - Origin.X * Scale.X),
+                    (int)(Position.Y - Origin.Y * Scale.Y),
                     (int)scaledSize.X,
                     (int)scaledSize.Y);
             }
@@ -44,10 +45,12 @@ namespace Scorch.DataModels
         }
 
         public FieldObject(
+            PhysicsType objectType,
             string id,
             Texture2D texture,
             Vector2 position)
         {
+            PhysicsType = objectType;
             Id = id;
             Texture = texture;
             Position = position;
@@ -60,6 +63,11 @@ namespace Scorch.DataModels
             Depth = Constants.Graphics.DrawOrder.TankMiddle;
             TimeToLive = null;
             ChildObjects = new Dictionary<string, FieldObject>();
+        }
+
+        public virtual void HandleCollision(ScorchGame game, Collision collision)
+        {
+            // do nothing here, but subclasses should override to handle collisions
         }
     }
 }

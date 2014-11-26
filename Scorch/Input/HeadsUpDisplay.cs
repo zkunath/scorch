@@ -28,16 +28,15 @@ namespace Scorch.Input
         public HeadsUpDisplay(
             GraphicsDevice graphicsDevice,
             SpriteFont font,
-            Texture2D aimOverlayTexture,
-            Texture2D powerIndicatorTexture)
+            Dictionary<string, Texture2D> textureAssets)
         {
             Width = graphicsDevice.Viewport.TitleSafeArea.Width;
             Height = graphicsDevice.Viewport.TitleSafeArea.Height;
 
             GraphicsDevice = graphicsDevice;
             Font = font;
-            AimOverlayTexture = aimOverlayTexture;
-            PowerIndicatorTexture = powerIndicatorTexture;
+            AimOverlayTexture = textureAssets["AimOverlay"];
+            PowerIndicatorTexture = textureAssets["PowerIndicator"];
             Position = new Vector2(32f, 32f);
             Mode = HudMode.Aim;
             AimOverlayPosition = -Vector2.One;

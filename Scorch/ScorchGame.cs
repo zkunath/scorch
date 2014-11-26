@@ -92,8 +92,7 @@ namespace Scorch
             HUD = new HeadsUpDisplay(
                 GraphicsDevice,
                 HudFont,
-                TextureAssets["AimOverlay"],
-                TextureAssets["PowerIndicator"]);
+                TextureAssets);
             HUD.InputControls["terrainButton"].AddOnButtonPressedEventHandler(new GameEventHandler(RegenerateTerrain), this);
             HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
             HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
@@ -165,8 +164,7 @@ namespace Scorch
             Tanks[i] = new Tank(
                 i.ToString(),
                 GraphicsDevice,
-                TextureAssets["Tank"],
-                TextureAssets["TankBarrel"],
+                TextureAssets,
                 Color.Black);
         }
 
@@ -186,19 +184,15 @@ namespace Scorch
 
         private static void Fire(ScorchGame game)
         {
-            var projectile = new FieldObject(
-                "projectile" + game.ProjectileId++,
-                game.TextureAssets["SpikyCircle"],
-                game.CurrentPlayerTank.BarrelOriginPosition);
-
-            projectile.Origin = projectile.Size / 2f;
-            projectile.Scale = Vector2.One * 0.1f;
-            projectile.Velocity = game.CurrentPlayerTank.Power * Constants.Physics.PlayerPowerVelocityFactor * new Vector2(
+            var velocity = game.CurrentPlayerTank.Power * Constants.Physics.PlayerPowerVelocityFactor * new Vector2(
                 (float)Math.Cos(game.CurrentPlayerTank.BarrelAngleInRadians),
                 (float)Math.Sin(game.CurrentPlayerTank.BarrelAngleInRadians));
-            projectile.PhysicsType |= PhysicsType.AffectedByGravity;
-            projectile.PhysicsType |= PhysicsType.CollidesWithTerrain;
-            projectile.PhysicsType |= PhysicsType.OnCollisionExplode;
+
+            var projectile = new Projectile(
+                "projectile" + game.ProjectileId++,
+                game.TextureAssets,
+                game.CurrentPlayerTank.ProjectileStartPosition,
+                velocity);
 
             game.GraphicsEngine.AddDrawableObject(projectile);
             game.PhysicsEngine.AddPhysicsObject(projectile);

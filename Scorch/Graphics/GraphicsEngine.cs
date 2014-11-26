@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Scorch;
+using Scorch.DataModels;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -46,12 +47,23 @@ namespace Scorch.Graphics
                     rotation: drawable.RotationInRadians,
                     depth: drawable.Depth);
 
-                if (Constants.Debug.ShowPlayerFootprint && drawable.Id.StartsWith("player"))
+                if (Constants.Debug.DrawFootprints && (drawable is Tank || drawable is Projectile))
                 {
                     game.SpriteBatch.Draw(
                         game.TextureAssets["Green"],
                         drawRectangle: ((Scorch.Physics.IPhysicsObject)drawable).Footprint,
                         depth: Constants.Graphics.DrawOrder.HudTop);
+                }
+
+                if (Constants.Debug.DrawTerrainHeightMap && (drawable is Terrain))
+                {
+                    for (int x = 0; x < game.Terrain.HeightMap.Length; x++)
+                    {
+                        game.SpriteBatch.Draw(
+                            game.TextureAssets["Green"],
+                            position: new Vector2(x, game.Terrain.Size.Y - game.Terrain.HeightMap[x]),
+                            depth: Constants.Graphics.DrawOrder.HudTop);
+                    }
                 }
 
                 foreach (var child in drawable.Children.Where(c => c.Visible))

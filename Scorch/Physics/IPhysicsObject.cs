@@ -10,20 +10,12 @@ namespace Scorch.Physics
     public interface IPhysicsObject
     {
         string Id { get; }
+        PhysicalProperties PhysicalProperties { get; }
+        PhysicsType PhysicsType { get; }
         Vector2 Position { get; set; }
         Vector2 Velocity { get; set; }
         Rectangle Footprint { get; }
         TimeSpan? TimeToLive { get; set; }
-        PhysicsType PhysicsType { get; set; }
-    }
-
-    [Flags]
-    public enum PhysicsType
-    {
-        None = 0,
-        AffectedByGravity = 1,
-        CollidesWithTerrain = 2,
-        OnCollisionExplode = 4,
-        OnCollisionStop = 8
+        void HandleCollision(ScorchGame game, Collision collision);
     }
 }

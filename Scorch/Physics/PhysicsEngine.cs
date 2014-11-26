@@ -10,33 +10,57 @@ namespace Scorch.Physics
     public class PhysicsEngine
     {
         private Dictionary<string, IPhysicsObject> PhysicsObjects;
+        private Dictionary<string, Tank> Tanks;
         private Terrain Terrain;
 
         public PhysicsEngine(Terrain terrain)
         {
             Terrain = terrain;
             PhysicsObjects = new Dictionary<string, IPhysicsObject>();
+            Tanks = new Dictionary<string, Tank>();
         }
 
         public void AddPhysicsObject(IPhysicsObject physicsObject)
         {
             this.PhysicsObjects.Add(physicsObject.Id, physicsObject);
+
+            if (physicsObject.PhysicsType == PhysicsType.Tank)
+            {
+                Tanks.Add(physicsObject.Id, (Tank)physicsObject);
+            }
         }
 
         public void RemovePhysicsObject(string id)
         {
+            var physicsObject = PhysicsObjects[id];
             this.PhysicsObjects.Remove(id);
+
+            if (physicsObject.PhysicsType == PhysicsType.Tank)
+            {
+                Tanks.Remove(physicsObject.Id);
+            }
         }
 
         public void Update(ScorchGame game, GameTime gameTime)
         {
             float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            var collisionObjectIds = new HashSet<string>();
             var removeObjectIds = new HashSet<string>();
             var addFieldObjects = new List<FieldObject>();
+            var collisions = new HashSet<Collision>();
 
             foreach (var physicsObject in PhysicsObjects.Values)
             {
+                if (physicsObject.TimeToLive.HasValue)
+                {
+                    if (physicsObject.TimeToLive <= TimeSpan.Zero)
+                    {
+                        removeObjectIds.Add(physicsObject.Id);
+                        continue;
+                    }
+
+                    physicsObject.TimeToLive -= gameTime.ElapsedGameTime;
+                }
+
                 Vector2 velocityDeltaFromGravity = CanFall(physicsObject, Terrain) ?
                     new Vector2(0, Constants.Physics.GravityAcceleration) * elapsedSeconds :
                     Vector2.Zero;
@@ -46,51 +70,36 @@ namespace Scorch.Physics
                 var nextPosition = physicsObject.Position += physicsObject.Velocity * elapsedSeconds;
                 physicsObject.Position = nextPosition;
 
-                if (physicsObject.TimeToLive.HasValue)
-                {
-                    physicsObject.TimeToLive -= gameTime.ElapsedGameTime;
-                }
-
-                if ((physicsObject.TimeToLive.HasValue && physicsObject.TimeToLive < TimeSpan.Zero) ||
-                    physicsObject.Position.X >= Terrain.Size.X || 
+                if (physicsObject.Position.X >= Terrain.Size.X || 
                     physicsObject.Position.X < 0)
                 {
-                    removeObjectIds.Add(physicsObject.Id);
+                    collisions.Add(new Collision(physicsObject, PhysicsType.FieldBounds));
                 }
                 
-                if (physicsObject.PhysicsType.HasFlag(PhysicsType.CollidesWithTerrain) &&
-                    CollidesWithTerrain(physicsObject, previousPosition, Terrain))
+                if (CollidesWithTerrain(physicsObject, previousPosition, Terrain))
                 {
-                    collisionObjectIds.Add(physicsObject.Id);
+                    collisions.Add(new Collision(physicsObject, Terrain));
+                }
+
+                if (physicsObject.PhysicsType == PhysicsType.Projectile)
+                {
+                    foreach (var tank in Tanks.Values)
+                    {
+                        if (CollidesWithFootprint(physicsObject, previousPosition, tank))
+                        {
+                            collisions.Add(new Collision(physicsObject, tank));
+                        }
+                    }
                 }
             }
 
-            foreach (var objectId in collisionObjectIds)
+            foreach (var collision in collisions)
             {
-                var physicsObject = PhysicsObjects[objectId];
-                if (physicsObject.PhysicsType.HasFlag(PhysicsType.OnCollisionExplode))
+                collision.PhysicsObject.HandleCollision(game, collision);
+
+                if (collision.CollisionObject != null)
                 {
-                    removeObjectIds.Add(physicsObject.Id);
-                    var explosion = new FieldObject(
-                        physicsObject.Id + "_explosion",
-                        game.TextureAssets["SpikyCircle"],
-                        physicsObject.Position);
-                    explosion.Origin = explosion.Size / 2f;
-                    explosion.TimeToLive = TimeSpan.FromMilliseconds(Constants.Physics.ExplosionDurationInMilliseconds);
-                    explosion.Depth = Constants.Graphics.DrawOrder.TankFront;
-                    explosion.Scale = Vector2.One * 1.05f;
-                    Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Scorch);
-                    explosion.Scale = Vector2.One;
-                    Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Destroy);
-                    addFieldObjects.Add(explosion);
-                }
-                else if (physicsObject.PhysicsType.HasFlag(PhysicsType.OnCollisionStop))
-                {
-                    var maxTerrainHeightUnderFootprint = MaxTerrainHeightUnderFootprint(physicsObject, Terrain);
-                    float positionAdjustmentY = Terrain.Size.Y - maxTerrainHeightUnderFootprint - physicsObject.Footprint.Bottom;
-                    // TODO: player damage based on impact velocity
-                    physicsObject.Velocity = Vector2.Zero;
-                    physicsObject.Position += new Vector2(0, positionAdjustmentY);
+                    collision.CollisionObject.HandleCollision(game, new Collision(collision.CollisionObject, collision.PhysicsObject));
                 }
             }
 
@@ -107,6 +116,23 @@ namespace Scorch.Physics
             }
         }
 
+        public void StopFallingObjectOnTerrain(IPhysicsObject physicsObject, Terrain terrain)
+        {
+            var maxTerrainHeightUnderFootprint = MaxTerrainHeightUnderFootprint(physicsObject, terrain);
+            float positionAdjustmentY = terrain.Size.Y - maxTerrainHeightUnderFootprint - physicsObject.Footprint.Bottom;
+            physicsObject.Velocity = Vector2.Zero;
+            physicsObject.Position += new Vector2(0, positionAdjustmentY);
+        }
+
+        private static bool CollidesWithFootprint(IPhysicsObject physicsObject, Vector2 previousPosition, IPhysicsObject collisionObject)
+        {
+            return InterpolatePositionUntil(
+                physicsObject,
+                previousPosition,
+                physicsObject.Position,
+                p => collisionObject.Footprint.Contains(p.Position));
+        }
+
         private static bool CollidesWithTerrain(IPhysicsObject physicsObject, Vector2 previousPosition, Terrain terrain)
         {
             if (physicsObject.Velocity == Vector2.Zero)
@@ -114,23 +140,38 @@ namespace Scorch.Physics
                 return false;
             }
 
-            if (physicsObject.PhysicsType.HasFlag(PhysicsType.OnCollisionStop) &&
-                FootprintCollidesWithTerrain(physicsObject, terrain))
+            if (physicsObject.PhysicsType == PhysicsType.Tank)
             {
-                return true;
+                return FootprintCollidesWithTerrain(physicsObject, terrain);
             }
-            
-            var nextPosition = physicsObject.Position;
+            else if (physicsObject.PhysicsType == PhysicsType.Projectile)
+            {
+                var nextPosition = physicsObject.Position;
+                return InterpolatePositionUntil(
+                    physicsObject,
+                    previousPosition,
+                    physicsObject.Position,
+                    p => terrain.IsTerrainLocatedAtPosition(p.Position) || p.Position.Y > terrain.Size.Y);
+            }
+
+            return false;
+        }
+
+        private static bool InterpolatePositionUntil(
+            IPhysicsObject physicsObject,
+            Vector2 previousPosition,
+            Vector2 nextPosition,
+            Func<IPhysicsObject, bool> predicate)
+        {
             var distance = Vector2.Distance(previousPosition, nextPosition);
             var totalPositionDelta = nextPosition - previousPosition;
             float numSteps = (float)Math.Ceiling(distance / Constants.Physics.CollisionDetectionMinDistancePerStep);
             for (float i = 1; i <= numSteps; i++)
             {
                 physicsObject.Position = previousPosition + totalPositionDelta * i / numSteps;
-                if (terrain.IsTerrainLocatedAtPosition(physicsObject.Position) ||
-                    physicsObject.Position.Y > terrain.Size.Y)
+
+                if (predicate(physicsObject))
                 {
-                    // object stops at interpolated collision position
                     return true;
                 }
             }
@@ -138,23 +179,29 @@ namespace Scorch.Physics
             return false;
         }
 
+        private static bool FootprintCollidesWithTerrain(IPhysicsObject physicsObject, Terrain terrain)
+        {
+            int maxTerrainHeightUnderFootprint = MaxTerrainHeightUnderFootprint(physicsObject, terrain);
+            return terrain.Size.Y - maxTerrainHeightUnderFootprint <= physicsObject.Footprint.Bottom;
+        }
+
         private static bool CanFall(IPhysicsObject physicsObject, Terrain terrain)
         {
             bool canFall = false;
-            if (physicsObject.PhysicsType.HasFlag(PhysicsType.AffectedByGravity))
+            if (physicsObject.PhysicalProperties.HasFlag(PhysicalProperties.AffectedByGravity))
             {
                 canFall = true;
 
-                if (physicsObject.PhysicsType.HasFlag(PhysicsType.CollidesWithTerrain) &&
-                    physicsObject.PhysicsType.HasFlag(PhysicsType.OnCollisionStop))
+                if (physicsObject.PhysicsType == PhysicsType.Tank)
                 {
-                    if (physicsObject.Footprint.Bottom >= terrain.Size.Y)
+                    var tank = (Tank)physicsObject;
+                    if (tank.Footprint.Bottom >= terrain.Size.Y)
                     {
                         canFall = false;
                     }
                     else
                     {
-                        canFall = !FootprintCollidesWithTerrain(physicsObject, terrain);
+                        canFall = !FootprintCollidesWithTerrain(tank, terrain);
                     }
                 }
             }
@@ -168,7 +215,7 @@ namespace Scorch.Physics
             for (int i = 0; i < physicsObject.Footprint.Width; i++)
             {
                 var x = physicsObject.Footprint.Left + i;
-                if (x >=0 && x < terrain.Size.X)
+                if (x >= 0 && x < terrain.Size.X)
                 {
                     maxTerrainHeightUnderFootprint = Math.Max(maxTerrainHeightUnderFootprint, terrain.HeightMap[x]);
                 }
@@ -176,11 +223,22 @@ namespace Scorch.Physics
 
             return maxTerrainHeightUnderFootprint;
         }
+    }
 
-        private static bool FootprintCollidesWithTerrain(IPhysicsObject physicsObject, Terrain terrain)
-        {
-            int maxTerrainHeightUnderFootprint = MaxTerrainHeightUnderFootprint(physicsObject, terrain);
-            return terrain.Size.Y - maxTerrainHeightUnderFootprint <= physicsObject.Footprint.Bottom;
-        }
+    [Flags]
+    public enum PhysicalProperties
+    {
+        None = 0,
+        AffectedByGravity = 1
+    }
+
+    public enum PhysicsType
+    {
+        None,
+        FieldBounds,
+        Terrain,
+        Tank,
+        Projectile,
+        Explosion
     }
 }

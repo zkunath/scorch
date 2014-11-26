@@ -11,6 +11,9 @@
         {
             public const float GravityAcceleration = 300;
             public const int ExplosionDurationInMilliseconds = 50;
+            public const float ExplosionBaseRadius = 64f;
+            public const float ExplosionBaseDamage = 100f;
+            public const float ExplosionScorchRadiusFactor = 1.1f;
             public const float CollisionDetectionMinDistancePerStep = 3f;
             public const float PlayerPowerVelocityFactor = 8f;
         }
@@ -23,6 +26,10 @@
 
         public static class Graphics
         {
+            public const float ProjectileScale = 0.075f;
+            public const float TankColorizeAmount = 0.7f;
+            public const float TankScorchBlackness = 0.8f;
+
             public static class DrawOrder
             {
                 public const float FarBack = 0.1f;
@@ -47,12 +54,13 @@
             public const float GradientRandomization = 0.04f;
             public const float SpeckleColorRandomization = 0.2f;
             public const float SpeckleChance = 0.001f;
-            public const float ScorchBlackness = 0.5f;
+            public const float ScorchBlackness = 0.8f;
         }
 
         public static class Debug
         {
-            public const bool ShowPlayerFootprint = false;
+            public const bool DrawFootprints = false;
+            public const bool DrawTerrainHeightMap = true;
         }
     }
 }

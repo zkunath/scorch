@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Scorch.Graphics;
+using Scorch.Physics;
 using System;
+using System.Collections.Generic;
 
 namespace Scorch.DataModels
 {
@@ -10,6 +12,7 @@ namespace Scorch.DataModels
         private GraphicsDevice GraphicsDevice;
         private Texture2D TankTexture;
         private Texture2D BarrelTexture;
+        private Color Color;
 
         private int _BarrelAngleInDegrees;
         public int BarrelAngleInDegrees
@@ -39,6 +42,18 @@ namespace Scorch.DataModels
             }
         }
 
+        public Vector2 ProjectileStartPosition
+        {
+            get
+            {
+                var barrel = ChildObjects["barrel"];
+                return BarrelOriginPosition +
+                    barrel.Size.X * barrel.Scale.X * new Vector2(
+                        (float)Math.Cos(BarrelAngleInRadians),
+                        (float)Math.Sin(BarrelAngleInRadians));
+            }
+        }
+
         private int _Power;
         public int Power
         {
@@ -55,24 +70,25 @@ namespace Scorch.DataModels
         public Tank(
             string name,
             GraphicsDevice graphicsDevice,
-            Texture2D tankTexture,
-            Texture2D barrelTexture,
+            Dictionary<string, Texture2D> textureAssets,
             Color color)
             : base(
+                PhysicsType.Tank,
                 "player_" + name,
-                tankTexture,
+                textureAssets["Tank"],
                 Vector2.Zero
             )
         {
             GraphicsDevice = graphicsDevice;
             Depth = Constants.Graphics.DrawOrder.TankMiddle;
-            TankTexture = tankTexture;
-            BarrelTexture = barrelTexture;
+            TankTexture = textureAssets["Tank"];
+            BarrelTexture = textureAssets["TankBarrel"];
             var barrelPosition = new Vector2(16f, 4.5f);
 
             var barrel = new FieldObject(
+                PhysicsType.Tank,
                 "barrel",
-                barrelTexture,
+                BarrelTexture,
                 barrelPosition);
 
             barrel.Origin = new Vector2(1f, 3.5f);
@@ -80,19 +96,16 @@ namespace Scorch.DataModels
             barrel.RotationInRadians = BarrelAngleInRadians;
             ChildObjects.Add(barrel.Id, barrel);
 
-            //SetColor(color);
-
             Power = 100;
 
-            PhysicsType |= Physics.PhysicsType.AffectedByGravity;
-            PhysicsType |= Physics.PhysicsType.CollidesWithTerrain;
-            PhysicsType |= Physics.PhysicsType.OnCollisionStop;
+            PhysicalProperties |= Physics.PhysicalProperties.AffectedByGravity;
         }
 
         public void SetColor(Color color)
         {
-            Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, TankTexture, color);
-            ChildObjects["barrel"].Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, BarrelTexture, color);
+            Color = color;
+            Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, TankTexture, color, Constants.Graphics.TankColorizeAmount);
+            ChildObjects["barrel"].Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, BarrelTexture, color, Constants.Graphics.TankColorizeAmount);
         }
 
         public void SetAngleAndPowerByTouchGesture(Vector2 aim, float minLength, float maxLength)
@@ -111,6 +124,19 @@ namespace Scorch.DataModels
             float aimLength = Math.Min(aim.Length(), maxLength);
             aimLength = (aimLength <= minLength ? 0 : aimLength);
             Power = (int)(aimLength / maxLength * 100);
+        }
+
+        public override void HandleCollision(ScorchGame game, Collision collision)
+        {
+            if (collision.CollisionObjectPhysicsType == PhysicsType.Terrain)
+            {
+                // TODO: player damage based on impact velocity
+                game.PhysicsEngine.StopFallingObjectOnTerrain(this, (Terrain)collision.CollisionObject);
+            }
+            else if (collision.CollisionObjectPhysicsType == PhysicsType.Projectile)
+            {
+                SetColor(GraphicsUtility.Blacken(Color, Constants.Graphics.TankScorchBlackness));
+            }
         }
     }
 }

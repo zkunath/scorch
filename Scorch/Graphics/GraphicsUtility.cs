@@ -89,7 +89,7 @@ namespace Scorch.Graphics
                 textureData.Length);
         }
 
-        public static Texture2D ColorizeTexture(GraphicsDevice graphicsDevice, Texture2D texture, Color color)
+        public static Texture2D ColorizeTexture(GraphicsDevice graphicsDevice, Texture2D texture, Color color, float amount)
         {
             Color[] textureData = new Color[texture.Width * texture.Height];
             texture.GetData(textureData);
@@ -98,9 +98,9 @@ namespace Scorch.Graphics
                 for (int y = 0; y < texture.Height; y++)
                 {
                     var currentColor = textureData[x + y * texture.Width];
-                    if (currentColor != Color.Transparent)
+                    if (currentColor != Color.Transparent && currentColor != Color.Black)
                     {
-                        textureData[x + y * texture.Width] = Color.Lerp(currentColor, color, 0.5f);
+                        textureData[x + y * texture.Width] = Color.Lerp(currentColor, color, amount);
                     }
                 }
             }
