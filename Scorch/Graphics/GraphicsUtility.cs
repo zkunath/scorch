@@ -6,6 +6,13 @@ namespace Scorch.Graphics
 {
     public static class GraphicsUtility
     {
+        public static Vector2 GetViewportSize(GraphicsDevice graphicsDevice)
+        {
+            return new Vector2(
+                graphicsDevice.Viewport.TitleSafeArea.Width,
+                graphicsDevice.Viewport.TitleSafeArea.Height);
+        }
+
         public static Rectangle AlignRectangle(Rectangle bounds, Vector2 size, Align align)
         {
             float top = 0;

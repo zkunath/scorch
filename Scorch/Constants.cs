@@ -29,6 +29,7 @@
             public const float ProjectileScale = 0.075f;
             public const float TankColorizeAmount = 0.7f;
             public const float TankScorchBlackness = 0.8f;
+            public const float PowerIndicatorScaleFactor = 190f / 128f; // ratio of aim indicator asset to power indicator asset
 
             public static class DrawOrder
             {

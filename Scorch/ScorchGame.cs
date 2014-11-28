@@ -63,41 +63,9 @@ namespace Scorch
         protected override void Initialize()
         {
             base.Initialize();
-            GraphicsEngine = new GraphicsEngine(GraphicsDevice);
-            SpriteBatch = new SpriteBatch(GraphicsDevice);
-            InputManager = new InputManager();
-
-            var numPlayers = Constants.Game.NumPlayers;
-            Tanks = new Tank[numPlayers];
-            for (int i = 0; i < numPlayers; i++)
-            {
-                AddPlayer(i);
-            }
-
-            Terrain = new Terrain(
-                Randomizer,
-                GraphicsDevice,
-                (int)GraphicsEngine.FieldSize.X,
-                (int)GraphicsEngine.FieldSize.Y);
-
-            Terrain.Regenerate(Tanks);
-            GraphicsEngine.AddDrawableObject(Terrain);
-            PhysicsEngine = new PhysicsEngine(Terrain);
-            for (int i = 0; i < numPlayers; i++)
-            {
-                GraphicsEngine.AddDrawableObject(Tanks[i]);
-                PhysicsEngine.AddPhysicsObject(Tanks[i]);
-            }
-
-            HUD = new HeadsUpDisplay(
-                GraphicsDevice,
-                HudFont,
-                TextureAssets);
-            HUD.InputControls["terrainButton"].AddOnButtonPressedEventHandler(new GameEventHandler(RegenerateTerrain), this);
-            HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
-            HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
-
-            TouchPanel.EnabledGestures = GestureType.None;
+            InitializeGraphics();
+            InitializeInput();
+            InitializeField();
         }
 
         /// <summary>
@@ -157,6 +125,59 @@ namespace Scorch
             SpriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void InitializeGraphics()
+        {
+            var viewportSize = GraphicsUtility.GetViewportSize(GraphicsDevice);
+
+            HUD = new HeadsUpDisplay(
+                GraphicsDevice,
+                viewportSize,
+                HudFont,
+                TextureAssets);
+            HUD.InputControls["terrainButton"].AddOnButtonPressedEventHandler(new GameEventHandler(RegenerateTerrain), this);
+            HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
+            HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
+
+            var fieldSize = viewportSize - new Vector2(0, HUD.BackgroundHeight);
+
+            GraphicsEngine = new GraphicsEngine(GraphicsDevice, viewportSize, fieldSize);
+            SpriteBatch = new SpriteBatch(GraphicsDevice);
+        }
+
+        private void InitializeInput()
+        {
+            InputManager = new InputManager();
+            TouchPanel.EnabledGestures = GestureType.None;
+#if WINDOWS_PHONE
+            //Windows.UI.ViewManagement.ApplicationView.getForCurrentView().SuppressSystemOverlays = true;
+#endif
+        }
+
+        private void InitializeField()
+        {
+            var numPlayers = Constants.Game.NumPlayers;
+            Tanks = new Tank[numPlayers];
+            for (int i = 0; i < numPlayers; i++)
+            {
+                AddPlayer(i);
+            }
+
+            Terrain = new Terrain(
+                Randomizer,
+                GraphicsDevice,
+                (int)GraphicsEngine.FieldSize.X,
+                (int)GraphicsEngine.FieldSize.Y);
+
+            Terrain.Regenerate(Tanks);
+            GraphicsEngine.AddDrawableObject(Terrain);
+            PhysicsEngine = new PhysicsEngine(Terrain);
+            for (int i = 0; i < numPlayers; i++)
+            {
+                GraphicsEngine.AddDrawableObject(Tanks[i]);
+                PhysicsEngine.AddPhysicsObject(Tanks[i]);
+            }
         }
 
         private void AddPlayer(int i)

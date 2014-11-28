@@ -12,14 +12,14 @@ namespace Scorch.Graphics
         private GraphicsDevice GraphicsDevice;
         private Dictionary<string, IDrawable> DrawableObjects;
 
-        public Vector2 CameraSize { get; private set; }
+        public Vector2 ViewportSize { get; private set; }
         public Vector2 FieldSize { get; private set; }
 
-        public GraphicsEngine(GraphicsDevice graphicsDevice)
+        public GraphicsEngine(GraphicsDevice graphicsDevice, Vector2 viewportSize, Vector2 fieldSize)
         {
             GraphicsDevice = graphicsDevice;
-            CameraSize = new Vector2(graphicsDevice.Viewport.TitleSafeArea.Width, graphicsDevice.Viewport.TitleSafeArea.Height);
-            FieldSize = CameraSize * 1f;
+            ViewportSize = viewportSize;
+            FieldSize = fieldSize;
             DrawableObjects = new Dictionary<string, IDrawable>();
         }
 

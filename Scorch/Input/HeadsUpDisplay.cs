@@ -17,9 +17,10 @@ namespace Scorch.Input
         private Texture2D BackgroundTexture;
         private Rectangle BackgroundFootprint;
         private Vector2 Position;
-        private int Width;
-        private int Height;
-        
+        private Vector2 ViewportSize;
+        private Rectangle ViewportFootprint;
+
+        public int BackgroundHeight { get; private set; }
         public string Mode { get; set; }
         public Vector2 AimOverlayPosition { get; set; }
         public int AimTouchId { get; set; }
@@ -27,13 +28,13 @@ namespace Scorch.Input
 
         public HeadsUpDisplay(
             GraphicsDevice graphicsDevice,
+            Vector2 viewportSize,
             SpriteFont font,
             Dictionary<string, Texture2D> textureAssets)
         {
-            Width = graphicsDevice.Viewport.TitleSafeArea.Width;
-            Height = graphicsDevice.Viewport.TitleSafeArea.Height;
-
             GraphicsDevice = graphicsDevice;
+            ViewportSize = viewportSize;
+            ViewportFootprint = new Rectangle(0, 0, (int)ViewportSize.X, (int)ViewportSize.Y);
             Font = font;
             AimOverlayTexture = textureAssets["AimOverlay"];
             PowerIndicatorTexture = textureAssets["PowerIndicator"];
@@ -41,36 +42,50 @@ namespace Scorch.Input
             Mode = HudMode.Aim;
             AimOverlayPosition = -Vector2.One;
             
-            BackgroundTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, new Color(0f, 0f, 0f, 0.25f));
-            int backgroundHeight = (int)(Height * Constants.HUD.BackgroundHeightFactor);
+            BackgroundTexture = GraphicsUtility.CreateTexture(graphicsDevice, 1, 1, Color.Black);
+            BackgroundHeight = (int)(ViewportSize.Y * Constants.HUD.BackgroundHeightFactor);
             BackgroundFootprint = GraphicsUtility.AlignRectangle(
                 GraphicsDevice.Viewport.TitleSafeArea,
-                new Vector2(Width, backgroundHeight),
+                new Vector2(ViewportSize.X, BackgroundHeight),
                 Align.Left | Align.Bottom);
 
             InputControls = new Dictionary<string, InputControl>();
-            var buttonSize = new Vector2((int)(Width * Constants.HUD.ButtonWidthFactor), backgroundHeight);
+            var buttonSize = new Vector2((int)(ViewportSize.X * Constants.HUD.ButtonWidthFactor), BackgroundHeight);
 
             AddInputControl(
                 "playerButton",
                 "PLAYER",
                 Color.Blue,
                 buttonSize,
-                Align.Left | Align.CenterY);
+                Align.CenterX | Align.Top);
 
             AddInputControl(
                 "fireButton",
                 "FIRE",
                 Color.Red,
                 buttonSize,
-                Align.Center);
+                Align.CenterX | Align.Bottom);
 
             AddInputControl(
                 "terrainButton",
                 "TERRAIN",
                 Color.Green,
                 buttonSize,
-                Align.Right | Align.CenterY);
+                Align.Right | Align.Top);
+
+            AddInputControl(
+                "angleButton",
+                "ANGLE",
+                Color.Yellow,
+                buttonSize,
+                Align.Left | Align.Bottom);
+
+            AddInputControl(
+                "powerButton",
+                "POWER",
+                Color.Cyan,
+                buttonSize,
+                Align.Right | Align.Bottom);
         }
 
         public void Update(ScorchGame game, GameTime gameTime, Dictionary<int, TouchInput> touchInputs)
@@ -103,8 +118,8 @@ namespace Scorch.Input
                         var aim = touchInputs[AimTouchId].Latest.Position - AimOverlayPosition;
                         game.CurrentPlayerTank.SetAngleAndPowerByTouchGesture(
                             aim,
-                            Height / 32,
-                            Height / 4);
+                            ViewportSize.Y / 32,
+                            ViewportSize.Y / 4);
                     }
                     else
                     {
@@ -146,9 +161,7 @@ namespace Scorch.Input
                     scale: Vector2.One * 2f,
                     depth: Constants.Graphics.DrawOrder.TankMiddle);
 
-                // 190px = radius of aim indicator asset
-                // 128px = radius of power indicator asset
-                float scaleFactor = game.CurrentPlayerTank.Power / 100f * 190f / 128f;
+                float scaleFactor = game.CurrentPlayerTank.Power / 100f * Constants.Graphics.PowerIndicatorScaleFactor;
 
                 game.SpriteBatch.Draw(
                     PowerIndicatorTexture,
@@ -168,7 +181,7 @@ namespace Scorch.Input
                 text,
                 color,
                 GraphicsUtility.AlignRectangle(
-                    BackgroundFootprint,
+                    ViewportFootprint,
                     size,
                     align));
 
