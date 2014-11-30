@@ -23,7 +23,7 @@ namespace Scorch.Input
 
         public void UpdateState(TouchLocation latest)
         {
-            Previous = latest;
+            Previous = Latest;
             Latest = CopyTouchLocation(latest);
             LatestIsHandled = false;
         }

@@ -76,6 +76,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="DataModels\Explosion.cs" />
     <Compile Include="DataModels\Projectile.cs" />
+    <Compile Include="Input\ScalarInputControl.cs" />
     <Compile Include="Physics\Collision.cs" />
     <Compile Include="Physics\IPhysicsObject.cs" />
     <Compile Include="Physics\PhysicsEngine.cs" />

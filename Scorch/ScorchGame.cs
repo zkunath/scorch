@@ -104,7 +104,7 @@ namespace Scorch
         protected override void Update(GameTime gameTime)
         {
             PhysicsEngine.Update(this, gameTime);
-            InputManager.Update(TouchPanel.GetState());
+            InputManager.Update();
             HUD.Update(this, gameTime, InputManager.TouchInputs);
 
             base.Update(gameTime);
@@ -149,10 +149,7 @@ namespace Scorch
         private void InitializeInput()
         {
             InputManager = new InputManager();
-            TouchPanel.EnabledGestures = GestureType.None;
-#if WINDOWS_PHONE
-            //Windows.UI.ViewManagement.ApplicationView.getForCurrentView().SuppressSystemOverlays = true;
-#endif
+            TouchPanel.EnabledGestures = GestureType.Flick;
         }
 
         private void InitializeField()

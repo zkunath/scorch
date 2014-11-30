@@ -62,6 +62,9 @@
         {
             public const bool DrawFootprints = false;
             public const bool DrawTerrainHeightMap = true;
+            public const bool EnableFrameRateCounter = false;
+            public const bool EnableRedrawRegions = false;
+            public const bool EnableCacheVisualization = false;
         }
     }
 }

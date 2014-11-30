@@ -73,19 +73,32 @@ namespace Scorch.Input
                 buttonSize,
                 Align.Right | Align.Top);
 
-            AddInputControl(
-                "angleButton",
+            var angleControl = new ScalarInputControl(
+                GraphicsDevice,
+                Font,
                 "ANGLE",
                 Color.Yellow,
-                buttonSize,
-                Align.Left | Align.Bottom);
+                GraphicsUtility.AlignRectangle(
+                    ViewportFootprint,
+                    buttonSize,
+                    Align.Left | Align.Bottom),
+                0f, 180f, 0f);
 
-            AddInputControl(
-                "powerButton",
+            InputControls.Add("angleButton", angleControl);
+
+
+            var powerControl = new ScalarInputControl(
+                GraphicsDevice,
+                Font,
                 "POWER",
                 Color.Cyan,
-                buttonSize,
-                Align.Right | Align.Bottom);
+                GraphicsUtility.AlignRectangle(
+                    ViewportFootprint,
+                    buttonSize,
+                    Align.Right | Align.Bottom),
+                0f, 0f, 100f);
+
+            InputControls.Add("powerButton", powerControl);
         }
 
         public void Update(ScorchGame game, GameTime gameTime, Dictionary<int, TouchInput> touchInputs)
@@ -93,6 +106,8 @@ namespace Scorch.Input
             foreach (var inputControl in InputControls.Values)
             {
                 inputControl.Update(gameTime, touchInputs);
+                game.CurrentPlayerTank.BarrelAngleInDegrees = (int)((ScalarInputControl)InputControls["angleButton"]).Value;
+                game.CurrentPlayerTank.Power = (int)((ScalarInputControl)InputControls["powerButton"]).Value;
             }
 
             if (Mode == HudMode.Aim)
@@ -120,6 +135,8 @@ namespace Scorch.Input
                             aim,
                             ViewportSize.Y / 32,
                             ViewportSize.Y / 4);
+                        ((ScalarInputControl)InputControls["angleButton"]).Value = game.CurrentPlayerTank.BarrelAngleInDegrees;
+                        ((ScalarInputControl)InputControls["powerButton"]).Value = game.CurrentPlayerTank.Power;
                     }
                     else
                     {

@@ -39,14 +39,14 @@ namespace Scorch
             if (Debugger.IsAttached)
             {
                 // Display the current frame rate counters.
-                Application.Current.Host.Settings.EnableFrameRateCounter = true;
+                Application.Current.Host.Settings.EnableFrameRateCounter = Constants.Debug.EnableFrameRateCounter;
 
                 // Show the areas of the app that are being redrawn in each frame.
-                //Application.Current.Host.Settings.EnableRedrawRegions = true;
+                Application.Current.Host.Settings.EnableRedrawRegions = Constants.Debug.EnableRedrawRegions;
 
                 // Enable non-production analysis visualization mode,
                 // which shows areas of a page that are handed off to GPU with a colored overlay.
-                //Application.Current.Host.Settings.EnableCacheVisualization = true;
+                Application.Current.Host.Settings.EnableCacheVisualization = Constants.Debug.EnableCacheVisualization;
 
                 // Prevent the screen from turning off while under the debugger by disabling
                 // the application's idle detection.
@@ -54,7 +54,6 @@ namespace Scorch
                 // and consume battery power when the user is not using the phone.
                 PhoneApplicationService.Current.UserIdleDetectionMode = IdleDetectionMode.Disabled;
             }
-
         }
 
         // Code to execute when the application is launching (eg, from Start)

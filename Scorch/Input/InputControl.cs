@@ -67,16 +67,21 @@ namespace Scorch.Input
             {
                 if (touchInputs.ContainsKey(ActiveTouchInputId))
                 {
+                    HandleTouchInput(touchInputs[ActiveTouchInputId]);
                     touchInputs[ActiveTouchInputId].LatestIsHandled = true;
-                    Active = Footprint.Contains(touchInputs[ActiveTouchInputId].Latest.Position);
                 }
                 else
                 {
-                    NeedsToProcessButtonPressed = Active;
+                    NeedsToProcessButtonPressed = Active && ButtonPressed != null;
                     Active = false;
                     ActiveTouchInputId = 0;
                 }
             }
+        }
+
+        public virtual void HandleTouchInput(TouchInput touchInput)
+        {
+            Active = Footprint.Contains(touchInput.Latest.Position);
         }
 
         public void Draw(SpriteBatch spriteBatch)
