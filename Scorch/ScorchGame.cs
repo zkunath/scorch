@@ -63,9 +63,10 @@ namespace Scorch
         protected override void Initialize()
         {
             base.Initialize();
-            InitializeGraphics();
             InitializeInput();
-            InitializeField();
+            InitializeGraphics(HUD);
+            InitializeField(GraphicsEngine);
+            HUD.SetCurrentPlayer(CurrentPlayerTank);
         }
 
         /// <summary>
@@ -105,7 +106,7 @@ namespace Scorch
         {
             PhysicsEngine.Update(this, gameTime);
             InputManager.Update();
-            HUD.Update(this, gameTime, InputManager.TouchInputs);
+            HUD.Update(this, gameTime, InputManager.TouchInputs, InputManager.GestureSamples);
 
             base.Update(gameTime);
         }
@@ -127,7 +128,16 @@ namespace Scorch
             base.Draw(gameTime);
         }
 
-        private void InitializeGraphics()
+        private void InitializeGraphics(HeadsUpDisplay hud)
+        {
+            var viewportSize = GraphicsUtility.GetViewportSize(GraphicsDevice);
+            var fieldSize = viewportSize - new Vector2(0, hud.BackgroundHeight);
+
+            GraphicsEngine = new GraphicsEngine(GraphicsDevice, viewportSize, fieldSize);
+            SpriteBatch = new SpriteBatch(GraphicsDevice);
+        }
+
+        private void InitializeInput()
         {
             var viewportSize = GraphicsUtility.GetViewportSize(GraphicsDevice);
 
@@ -140,19 +150,11 @@ namespace Scorch
             HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
             HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
 
-            var fieldSize = viewportSize - new Vector2(0, HUD.BackgroundHeight);
-
-            GraphicsEngine = new GraphicsEngine(GraphicsDevice, viewportSize, fieldSize);
-            SpriteBatch = new SpriteBatch(GraphicsDevice);
-        }
-
-        private void InitializeInput()
-        {
             InputManager = new InputManager();
             TouchPanel.EnabledGestures = GestureType.Flick;
         }
 
-        private void InitializeField()
+        private void InitializeField(GraphicsEngine graphicsEngine)
         {
             var numPlayers = Constants.Game.NumPlayers;
             Tanks = new Tank[numPlayers];
@@ -164,15 +166,15 @@ namespace Scorch
             Terrain = new Terrain(
                 Randomizer,
                 GraphicsDevice,
-                (int)GraphicsEngine.FieldSize.X,
-                (int)GraphicsEngine.FieldSize.Y);
+                (int)graphicsEngine.FieldSize.X,
+                (int)graphicsEngine.FieldSize.Y);
 
             Terrain.Regenerate(Tanks);
-            GraphicsEngine.AddDrawableObject(Terrain);
+            graphicsEngine.AddDrawableObject(Terrain);
             PhysicsEngine = new PhysicsEngine(Terrain);
             for (int i = 0; i < numPlayers; i++)
             {
-                GraphicsEngine.AddDrawableObject(Tanks[i]);
+                graphicsEngine.AddDrawableObject(Tanks[i]);
                 PhysicsEngine.AddPhysicsObject(Tanks[i]);
             }
         }
@@ -198,6 +200,8 @@ namespace Scorch
             {
                 game.CurrentPlayerIndex = 0;
             }
+
+            game.HUD.SetCurrentPlayer(game.CurrentPlayerTank);
         }
 
         private static void Fire(ScorchGame game)
@@ -209,7 +213,7 @@ namespace Scorch
             var projectile = new Projectile(
                 "projectile" + game.ProjectileId++,
                 game.TextureAssets,
-                game.CurrentPlayerTank.ProjectileStartPosition,
+                game.CurrentPlayerTank.BarrelEndPosition,
                 velocity);
 
             game.GraphicsEngine.AddDrawableObject(projectile);

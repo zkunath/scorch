@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input.Touch;
 using Scorch;
 using Scorch.DataModels;
 using Scorch.Graphics;
@@ -17,11 +18,12 @@ namespace Scorch.Input
         private Texture2D BackgroundTexture;
         private Texture2D ActiveOverlayTexture;
         private Texture2D PressedOverlayTexture;
-        private bool Active;
         private int ActiveTouchInputId;
         private bool NeedsToProcessButtonPressed;
         private event ScorchGame.GameEventHandler ButtonPressed;
         private ScorchGame Game;
+
+        public bool Active { get; set; }
 
         public InputControl(
             GraphicsDevice graphicsDevice,
@@ -46,7 +48,7 @@ namespace Scorch.Input
             Game = game;
         }
 
-        public void Update(GameTime gameTime, Dictionary<int, TouchInput> touchInputs)
+        public void Update(Dictionary<int, TouchInput> touchInputs, List<GestureSample> gestures)
         {
             if (NeedsToProcessButtonPressed)
             {

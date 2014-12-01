@@ -8,13 +8,13 @@ namespace Scorch.Input
     {
         public Dictionary<int, TouchInput> TouchInputs { get; private set; }
         public Dictionary<int, TouchInput> EmptyTouchInputs { get; private set; }
-        public Queue<GestureSample> GestureSamples { get; private set; }
+        public List<GestureSample> GestureSamples { get; private set; }
         
         public InputManager()
         {
             TouchInputs = new Dictionary<int, TouchInput>();
             EmptyTouchInputs = new Dictionary<int, TouchInput>();
-            GestureSamples = new Queue<GestureSample>();
+            GestureSamples = new List<GestureSample>();
         }
 
         public void Update()
@@ -48,7 +48,7 @@ namespace Scorch.Input
 
             if (TouchPanel.IsGestureAvailable)
             {
-                GestureSamples.Enqueue(TouchPanel.ReadGesture());
+                GestureSamples.Add(TouchPanel.ReadGesture());
             }
         }
     }

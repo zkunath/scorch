@@ -20,8 +20,19 @@
 
         public static class HUD
         {
+            public const bool AimIndicatorEnabled = false;
+            public const int MinAngleInDegrees = 0;
+            public const int MaxAngleInDegrees = 180;
+            public const int MinPower = 0;
+            public const int MaxPower = 100;
+            public const int InitialPower = 50;
             public const float BackgroundHeightFactor = 0.125f;
             public const float ButtonWidthFactor = 0.25f;
+            public const float ScalarButtonWidthFactor = 0.375f;
+            public const float AngleButtonInputScale = 8f;
+            public const float PowerButtonInputScale = 8f;
+            public const int PowerIndicatorDurationInMilliseconds = 500;
+            public const float AimIndicatorOpacity = 0.75f;
         }
 
         public static class Graphics
@@ -63,7 +74,7 @@
             public const bool DrawFootprints = false;
             public const bool DrawTerrainHeightMap = true;
             public const bool EnableFrameRateCounter = false;
-            public const bool EnableRedrawRegions = false;
+            public const bool EnableRedrawRegions = true;
             public const bool EnableCacheVisualization = false;
         }
     }

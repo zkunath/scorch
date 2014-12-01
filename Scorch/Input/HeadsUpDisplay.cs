@@ -1,8 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input.Touch;
 using Scorch;
 using Scorch.DataModels;
 using Scorch.Graphics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -14,6 +16,7 @@ namespace Scorch.Input
         private SpriteFont Font;
         private Texture2D AimOverlayTexture;
         private Texture2D PowerIndicatorTexture;
+        private int PowerIndicatorDelayInMilliseconds;
         private Texture2D BackgroundTexture;
         private Rectangle BackgroundFootprint;
         private Vector2 Position;
@@ -51,6 +54,7 @@ namespace Scorch.Input
 
             InputControls = new Dictionary<string, InputControl>();
             var buttonSize = new Vector2((int)(ViewportSize.X * Constants.HUD.ButtonWidthFactor), BackgroundHeight);
+            var scalarButtonSize = new Vector2((int)(ViewportSize.X * Constants.HUD.ScalarButtonWidthFactor), BackgroundHeight);
 
             AddInputControl(
                 "playerButton",
@@ -80,12 +84,12 @@ namespace Scorch.Input
                 Color.Yellow,
                 GraphicsUtility.AlignRectangle(
                     ViewportFootprint,
-                    buttonSize,
+                    scalarButtonSize,
                     Align.Left | Align.Bottom),
-                0f, 180f, 0f);
+                180f, 0f,
+                Constants.HUD.AngleButtonInputScale);
 
             InputControls.Add("angleButton", angleControl);
-
 
             var powerControl = new ScalarInputControl(
                 GraphicsDevice,
@@ -94,21 +98,28 @@ namespace Scorch.Input
                 Color.Cyan,
                 GraphicsUtility.AlignRectangle(
                     ViewportFootprint,
-                    buttonSize,
+                    scalarButtonSize,
                     Align.Right | Align.Bottom),
-                0f, 0f, 100f);
+                0f, 100f,
+                Constants.HUD.PowerButtonInputScale);
 
             InputControls.Add("powerButton", powerControl);
         }
 
-        public void Update(ScorchGame game, GameTime gameTime, Dictionary<int, TouchInput> touchInputs)
+        public void SetCurrentPlayer(Tank tank)
         {
-            foreach (var inputControl in InputControls.Values)
-            {
-                inputControl.Update(gameTime, touchInputs);
-                game.CurrentPlayerTank.BarrelAngleInDegrees = (int)((ScalarInputControl)InputControls["angleButton"]).Value;
-                game.CurrentPlayerTank.Power = (int)((ScalarInputControl)InputControls["powerButton"]).Value;
-            }
+            ((ScalarInputControl)InputControls["angleButton"]).Value = tank.BarrelAngleInDegrees;
+            ((ScalarInputControl)InputControls["powerButton"]).Value = tank.Power;
+        }
+
+        public void Update(
+            ScorchGame game,
+            GameTime gameTime,
+            Dictionary<int, TouchInput> touchInputs,
+            List<GestureSample> gestures)
+        {
+            ApplyGameTime(gameTime);
+            UpdateInputControls(game, gameTime, touchInputs, gestures);
 
             if (Mode == HudMode.Aim)
             {
@@ -124,6 +135,8 @@ namespace Scorch.Input
 
                 if (AimTouchId != 0)
                 {
+                    ShowPowerIndicator();
+
                     if (touchInputs.ContainsKey(AimTouchId))
                     {
                         touchInputs[AimTouchId].LatestIsHandled = true;
@@ -169,25 +182,68 @@ namespace Scorch.Input
                 inputControl.Draw(game.SpriteBatch);
             }
 
-            if (AimTouchId != 0)
+            if (AimTouchId != 0 && Constants.HUD.AimIndicatorEnabled)
             {
                 game.SpriteBatch.Draw(
                     AimOverlayTexture,
                     position: AimOverlayPosition,
                     origin: new Vector2(96, 0),
                     scale: Vector2.One * 2f,
-                    depth: Constants.Graphics.DrawOrder.TankMiddle);
+                    depth: Constants.Graphics.DrawOrder.TankMiddle,
+                    color: Color.White * Constants.HUD.AimIndicatorOpacity);
+            }
 
+            if (PowerIndicatorDelayInMilliseconds > 0)
+            {
                 float scaleFactor = game.CurrentPlayerTank.Power / 100f * Constants.Graphics.PowerIndicatorScaleFactor;
-
                 game.SpriteBatch.Draw(
                     PowerIndicatorTexture,
-                    position: game.CurrentPlayerTank.BarrelOriginPosition,
+                    position: game.CurrentPlayerTank.BarrelEndPosition,
                     scale: Vector2.One * scaleFactor,
                     origin: new Vector2(0f, 17f),
                     rotation: game.CurrentPlayerTank.BarrelAngleInRadians,
-                    depth: Constants.Graphics.DrawOrder.Back);
+                    depth: Constants.Graphics.DrawOrder.Back,
+                    color: Color.White * Constants.HUD.AimIndicatorOpacity * 
+                        (1f * PowerIndicatorDelayInMilliseconds / Constants.HUD.PowerIndicatorDurationInMilliseconds));
             }
+        }
+
+        private void ApplyGameTime(GameTime gameTime)
+        {
+            PowerIndicatorDelayInMilliseconds = Math.Max(0, PowerIndicatorDelayInMilliseconds - (int)gameTime.ElapsedGameTime.TotalMilliseconds);
+        }
+
+        private void UpdateInputControls(
+            ScorchGame game,
+            GameTime gameTime,
+            Dictionary<int, TouchInput> touchInputs,
+            List<GestureSample> gestures)
+        {
+            foreach (var inputControl in InputControls.Values)
+            {
+                inputControl.Update(touchInputs, gestures);
+            }
+
+            var angleButton = (ScalarInputControl)InputControls["angleButton"];
+            if (angleButton.Active)
+            {
+                game.CurrentPlayerTank.BarrelAngleInDegrees = (int)angleButton.Value;
+                ShowPowerIndicator();
+            }
+
+            var powerButton = (ScalarInputControl)InputControls["powerButton"];
+            if (powerButton.Active)
+            {
+                game.CurrentPlayerTank.Power = (int)powerButton.Value;
+                ShowPowerIndicator();
+            }
+
+            gestures.Clear();
+        }
+
+        private void ShowPowerIndicator()
+        {
+            PowerIndicatorDelayInMilliseconds = Constants.HUD.PowerIndicatorDurationInMilliseconds;
         }
 
         private void AddInputControl(string id, string text, Color color, Vector2 size, Align align)

@@ -23,7 +23,10 @@ namespace Scorch.DataModels
             }
             set
             {
-                _BarrelAngleInDegrees = MathHelper.Clamp(value, 0, 180);
+                _BarrelAngleInDegrees = MathHelper.Clamp(
+                    value,
+                    Constants.HUD.MinAngleInDegrees,
+                    Constants.HUD.MaxAngleInDegrees);
                 ChildObjects["barrel"].RotationInRadians = BarrelAngleInRadians;
             }
         }
@@ -42,7 +45,7 @@ namespace Scorch.DataModels
             }
         }
 
-        public Vector2 ProjectileStartPosition
+        public Vector2 BarrelEndPosition
         {
             get
             {
@@ -63,7 +66,10 @@ namespace Scorch.DataModels
             }
             set
             {
-                _Power = MathHelper.Clamp(value, 0, 100);
+                _Power = MathHelper.Clamp(
+                    value,
+                    Constants.HUD.MinPower,
+                    Constants.HUD.MaxPower);
             }
         }
 
@@ -96,7 +102,7 @@ namespace Scorch.DataModels
             barrel.RotationInRadians = BarrelAngleInRadians;
             ChildObjects.Add(barrel.Id, barrel);
 
-            Power = 100;
+            Power = Constants.HUD.InitialPower;
 
             PhysicalProperties |= Physics.PhysicalProperties.AffectedByGravity;
         }
