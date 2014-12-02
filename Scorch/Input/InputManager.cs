@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Input.Touch;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,15 +7,18 @@ namespace Scorch.Input
 {
     public class InputManager
     {
+        private float minGestureDeltaLength = float.MaxValue;
+        private float maxGestureDeltaLength = 0;
+
         public Dictionary<int, TouchInput> TouchInputs { get; private set; }
         public Dictionary<int, TouchInput> EmptyTouchInputs { get; private set; }
-        public List<GestureSample> GestureSamples { get; private set; }
+        public List<TouchGesture> TouchGestures { get; private set; }
         
         public InputManager()
         {
             TouchInputs = new Dictionary<int, TouchInput>();
             EmptyTouchInputs = new Dictionary<int, TouchInput>();
-            GestureSamples = new List<GestureSample>();
+            TouchGestures = new List<TouchGesture>();
         }
 
         public void Update()
@@ -46,9 +50,14 @@ namespace Scorch.Input
                 }
             }
 
-            if (TouchPanel.IsGestureAvailable)
+            while (TouchPanel.IsGestureAvailable)
             {
-                GestureSamples.Add(TouchPanel.ReadGesture());
+                var touchGesture = new TouchGesture(TouchPanel.ReadGesture(), TouchInputs);
+                TouchGestures.Add(touchGesture);
+
+                var deltaLength = touchGesture.Gesture.Delta.Length();
+                minGestureDeltaLength = Math.Min(minGestureDeltaLength, deltaLength);
+                maxGestureDeltaLength = Math.Max(maxGestureDeltaLength, deltaLength);
             }
         }
     }

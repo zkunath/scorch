@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input.Touch;
 using Scorch;
 using Scorch.DataModels;
 using Scorch.Graphics;
@@ -12,7 +13,6 @@ namespace Scorch.Input
 {
     public class ScalarInputControl : InputControl
     {
-        private float InputScale;
         private float UnscaledLeftValue;
         private float UnscaledRightValue;
         private float _UnscaledValue;
@@ -35,14 +35,11 @@ namespace Scorch.Input
         {
             get
             {
-                return _UnscaledValue / InputScale;
+                return ScaleDown(UnscaledValue);
             }
             set
             {
-                _UnscaledValue = MathHelper.Clamp(
-                    value * InputScale,
-                    Math.Min(UnscaledLeftValue, UnscaledRightValue) * InputScale,
-                    Math.Max(UnscaledLeftValue, UnscaledRightValue) * InputScale);
+                UnscaledValue = ScaleUp(value);
             }
         }
 
@@ -53,8 +50,7 @@ namespace Scorch.Input
             Color color,
             Rectangle footprint,
             float leftValue,
-            float rightValue,
-            float inputScale) 
+            float rightValue) 
             : base(
                 graphicsDevice,
                 font,
@@ -62,15 +58,51 @@ namespace Scorch.Input
                 color,
                 footprint)
         {
-            InputScale = inputScale;
-            UnscaledLeftValue = leftValue * inputScale;
-            UnscaledRightValue = rightValue * inputScale;
+            UnscaledLeftValue = ScaleUp(leftValue);
+            UnscaledRightValue = ScaleUp(rightValue);
         }
 
-        public override void HandleTouchInput(TouchInput touchInput)
+        public override void Update(
+            GameTime gameTime,
+            Dictionary<int, TouchInput> touchInputs,
+            List<TouchGesture> touchGestures)
+        {
+            base.Update(gameTime, touchInputs, touchGestures);
+        }
+
+        protected override void HandleTouchInput(TouchInput touchInput)
         {
             base.HandleTouchInput(touchInput);
-            _UnscaledValue += (touchInput.Latest.Position.X - touchInput.Previous.Position.X) * (UnscaledLeftValue > UnscaledRightValue ? -1 : 1);
+
+            if (!Constants.HUD.ConsumeDragGesture)
+            {
+                AddToUnscaledValue(touchInput.Latest.Position.X - touchInput.Previous.Position.X);
+            }
+        }
+
+        protected override void HandleTouchGesture(TouchGesture touchGesture)
+        {
+            base.HandleTouchGesture(touchGesture);
+            if (Constants.HUD.ConsumeDragGesture)
+            {
+                AddToUnscaledValue(touchGesture.Gesture.Delta.X);
+            }
+        }
+
+        private void AddToUnscaledValue(float delta)
+        {
+            UnscaledValue += delta * Math.Sign(UnscaledRightValue - UnscaledLeftValue);
+            Active = true;
+        }
+
+        private static float ScaleUp(float value)
+        {
+            return value * Constants.HUD.ScalarButtonScaleFactor;
+        }
+
+        private static float ScaleDown(float value)
+        {
+            return value / Constants.HUD.ScalarButtonScaleFactor;
         }
     }
 }

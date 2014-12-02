@@ -48,7 +48,10 @@ namespace Scorch.Input
             Game = game;
         }
 
-        public void Update(Dictionary<int, TouchInput> touchInputs, List<GestureSample> gestures)
+        public virtual void Update(
+            GameTime gameTime,
+            Dictionary<int, TouchInput> touchInputs,
+            List<TouchGesture> touchGestures)
         {
             if (NeedsToProcessButtonPressed)
             {
@@ -57,11 +60,11 @@ namespace Scorch.Input
 
             if (ActiveTouchInputId == 0)
             {
-                var newTouchOnMe = touchInputs.Values.FirstOrDefault(t => Footprint.Contains(t.Origin.Position) && !t.LatestIsHandled);
+                var newTouchOnMe = touchInputs.Values.FirstOrDefault(t => Footprint.Contains(t.Origin.Position) && !t.IsHandled);
                 if (newTouchOnMe != null)
                 {
                     ActiveTouchInputId = newTouchOnMe.Id;
-                    newTouchOnMe.LatestIsHandled = true;
+                    newTouchOnMe.IsHandled = true;
                 }
             }
 
@@ -69,8 +72,14 @@ namespace Scorch.Input
             {
                 if (touchInputs.ContainsKey(ActiveTouchInputId))
                 {
-                    HandleTouchInput(touchInputs[ActiveTouchInputId]);
-                    touchInputs[ActiveTouchInputId].LatestIsHandled = true;
+                    var activeTouchInput = touchInputs[ActiveTouchInputId];
+                    HandleTouchInput(activeTouchInput);
+                    activeTouchInput.IsHandled = true;
+
+                    foreach (var touchGesture in touchGestures.Where(g => g.Id == ActiveTouchInputId && !g.IsHandled))
+                    {
+                        HandleTouchGesture(touchGesture);
+                    }
                 }
                 else
                 {
@@ -79,11 +88,6 @@ namespace Scorch.Input
                     ActiveTouchInputId = 0;
                 }
             }
-        }
-
-        public virtual void HandleTouchInput(TouchInput touchInput)
-        {
-            Active = Footprint.Contains(touchInput.Latest.Position);
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -120,6 +124,16 @@ namespace Scorch.Input
                 Constants.Graphics.DrawOrder.HudFront);
         }
 
+        protected virtual void HandleTouchInput(TouchInput touchInput)
+        {
+            Active = Footprint.Contains(touchInput.Latest.Position);
+        }
+
+        protected virtual void HandleTouchGesture(TouchGesture touchGesture)
+        {
+            touchGesture.IsHandled = true;
+        }
+
         private void ProcessButtonPressed()
         {
             if (ButtonPressed != null && Game != null)
@@ -128,6 +142,22 @@ namespace Scorch.Input
             }
 
             NeedsToProcessButtonPressed = false;
+        }
+
+        private bool NeedsToHandleGesture(GestureSample gesture, TouchInput activeTouchInput)
+        {
+            bool needsToHandleGesture = false;
+            
+            if (gesture.GestureType == GestureType.Flick && activeTouchInput.Latest.State == TouchLocationState.Released)
+            {
+                needsToHandleGesture = true;
+            }
+            else 
+            {
+                needsToHandleGesture = gesture.Position != Vector2.Zero && Footprint.Contains(gesture.Position);
+            }
+
+            return needsToHandleGesture;
         }
     }
 }

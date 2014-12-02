@@ -1,5 +1,5 @@
-﻿using Microsoft.Xna.Framework.Input.Touch;
-using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input.Touch;
 using System.Diagnostics;
 
 namespace Scorch.Input
@@ -7,7 +7,7 @@ namespace Scorch.Input
     public class TouchInput
     {
         public int Id { get; private set; }
-        public bool LatestIsHandled { get; set; }
+        public bool IsHandled { get; set; }
         public TouchLocation Latest { get; private set; }
         public TouchLocation Previous { get; private set; }
         public TouchLocation Origin { get; private set; }
@@ -25,7 +25,12 @@ namespace Scorch.Input
         {
             Previous = Latest;
             Latest = CopyTouchLocation(latest);
-            LatestIsHandled = false;
+            IsHandled = false;
+        }
+
+        public float GetDistanceFrom(GestureSample gesture)
+        {
+            return Vector2.Distance(gesture.Position, Latest.Position);
         }
 
         private static TouchLocation CopyTouchLocation(TouchLocation touchLocation)

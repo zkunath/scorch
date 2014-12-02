@@ -106,7 +106,7 @@ namespace Scorch
         {
             PhysicsEngine.Update(this, gameTime);
             InputManager.Update();
-            HUD.Update(this, gameTime, InputManager.TouchInputs, InputManager.GestureSamples);
+            HUD.Update(this, gameTime, InputManager.TouchInputs, InputManager.TouchGestures);
 
             base.Update(gameTime);
         }
@@ -146,12 +146,12 @@ namespace Scorch
                 viewportSize,
                 HudFont,
                 TextureAssets);
-            HUD.InputControls["terrainButton"].AddOnButtonPressedEventHandler(new GameEventHandler(RegenerateTerrain), this);
+            HUD.InputControls["resetButton"].AddOnButtonPressedEventHandler(new GameEventHandler(ResetField), this);
             HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
             HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
 
             InputManager = new InputManager();
-            TouchPanel.EnabledGestures = GestureType.Flick;
+            TouchPanel.EnabledGestures = GestureType.FreeDrag;
         }
 
         private void InitializeField(GraphicsEngine graphicsEngine)
@@ -169,14 +169,16 @@ namespace Scorch
                 (int)graphicsEngine.FieldSize.X,
                 (int)graphicsEngine.FieldSize.Y);
 
-            Terrain.Regenerate(Tanks);
             graphicsEngine.AddDrawableObject(Terrain);
             PhysicsEngine = new PhysicsEngine(Terrain);
+
             for (int i = 0; i < numPlayers; i++)
             {
                 graphicsEngine.AddDrawableObject(Tanks[i]);
                 PhysicsEngine.AddPhysicsObject(Tanks[i]);
             }
+
+            ResetField(this);
         }
 
         private void AddPlayer(int i)
@@ -188,9 +190,15 @@ namespace Scorch
                 Color.Black);
         }
 
-        private static void RegenerateTerrain(ScorchGame game)
+        private static void ResetField(ScorchGame game)
         {
+            foreach (var tank in game.Tanks)
+            {
+                tank.Power = Constants.HUD.InitialPower;
+            }
+
             game.Terrain.Regenerate(game.Tanks);
+            game.HUD.SetCurrentPlayer(game.CurrentPlayerTank);
         }
 
         private static void NextPlayer(ScorchGame game)

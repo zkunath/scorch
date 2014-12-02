@@ -71,8 +71,8 @@ namespace Scorch.Input
                 Align.CenterX | Align.Bottom);
 
             AddInputControl(
-                "terrainButton",
-                "TERRAIN",
+                "resetButton",
+                "RESET",
                 Color.Green,
                 buttonSize,
                 Align.Right | Align.Top);
@@ -86,8 +86,8 @@ namespace Scorch.Input
                     ViewportFootprint,
                     scalarButtonSize,
                     Align.Left | Align.Bottom),
-                180f, 0f,
-                Constants.HUD.AngleButtonInputScale);
+                180f,
+                0f);
 
             InputControls.Add("angleButton", angleControl);
 
@@ -100,8 +100,8 @@ namespace Scorch.Input
                     ViewportFootprint,
                     scalarButtonSize,
                     Align.Right | Align.Bottom),
-                0f, 100f,
-                Constants.HUD.PowerButtonInputScale);
+                0f,
+                100f);
 
             InputControls.Add("powerButton", powerControl);
         }
@@ -116,19 +116,19 @@ namespace Scorch.Input
             ScorchGame game,
             GameTime gameTime,
             Dictionary<int, TouchInput> touchInputs,
-            List<GestureSample> gestures)
+            List<TouchGesture> touchGestures)
         {
             ApplyGameTime(gameTime);
-            UpdateInputControls(game, gameTime, touchInputs, gestures);
+            UpdateInputControls(game, gameTime, touchInputs, touchGestures);
 
             if (Mode == HudMode.Aim)
             {
                 if (AimTouchId == 0)
                 {
-                    var newAimTouch = touchInputs.Values.FirstOrDefault(t => !t.LatestIsHandled);
+                    var newAimTouch = touchInputs.Values.FirstOrDefault(t => !t.IsHandled);
                     if (newAimTouch != null)
                     {
-                        newAimTouch.LatestIsHandled = true;
+                        newAimTouch.IsHandled = true;
                         AimTouchId = newAimTouch.Id;
                     }
                 }
@@ -139,15 +139,16 @@ namespace Scorch.Input
 
                     if (touchInputs.ContainsKey(AimTouchId))
                     {
-                        touchInputs[AimTouchId].LatestIsHandled = true;
+                        touchInputs[AimTouchId].IsHandled = true;
 
                         AimOverlayPosition = game.CurrentPlayerTank.BarrelOriginPosition;
 
                         var aim = touchInputs[AimTouchId].Latest.Position - AimOverlayPosition;
-                        game.CurrentPlayerTank.SetAngleAndPowerByTouchGesture(
+                        game.CurrentPlayerTank.SetAngleAndPowerByAimVector(
                             aim,
                             ViewportSize.Y / 32,
                             ViewportSize.Y / 4);
+
                         ((ScalarInputControl)InputControls["angleButton"]).Value = game.CurrentPlayerTank.BarrelAngleInDegrees;
                         ((ScalarInputControl)InputControls["powerButton"]).Value = game.CurrentPlayerTank.Power;
                     }
@@ -190,7 +191,7 @@ namespace Scorch.Input
                     origin: new Vector2(96, 0),
                     scale: Vector2.One * 2f,
                     depth: Constants.Graphics.DrawOrder.TankMiddle,
-                    color: Color.White * Constants.HUD.AimIndicatorOpacity);
+                    color: Color.White * Constants.HUD.AimOverlayOpacity);
             }
 
             if (PowerIndicatorDelayInMilliseconds > 0)
@@ -203,7 +204,7 @@ namespace Scorch.Input
                     origin: new Vector2(0f, 17f),
                     rotation: game.CurrentPlayerTank.BarrelAngleInRadians,
                     depth: Constants.Graphics.DrawOrder.Back,
-                    color: Color.White * Constants.HUD.AimIndicatorOpacity * 
+                    color: Color.White * Constants.HUD.AimOverlayOpacity * 
                         (1f * PowerIndicatorDelayInMilliseconds / Constants.HUD.PowerIndicatorDurationInMilliseconds));
             }
         }
@@ -217,11 +218,11 @@ namespace Scorch.Input
             ScorchGame game,
             GameTime gameTime,
             Dictionary<int, TouchInput> touchInputs,
-            List<GestureSample> gestures)
+            List<TouchGesture> touchGestures)
         {
             foreach (var inputControl in InputControls.Values)
             {
-                inputControl.Update(touchInputs, gestures);
+                inputControl.Update(gameTime, touchInputs, touchGestures);
             }
 
             var angleButton = (ScalarInputControl)InputControls["angleButton"];
@@ -238,7 +239,7 @@ namespace Scorch.Input
                 ShowPowerIndicator();
             }
 
-            gestures.Clear();
+            touchGestures.Clear();
         }
 
         private void ShowPowerIndicator()

@@ -102,8 +102,6 @@ namespace Scorch.DataModels
             barrel.RotationInRadians = BarrelAngleInRadians;
             ChildObjects.Add(barrel.Id, barrel);
 
-            Power = Constants.HUD.InitialPower;
-
             PhysicalProperties |= Physics.PhysicalProperties.AffectedByGravity;
         }
 
@@ -114,7 +112,7 @@ namespace Scorch.DataModels
             ChildObjects["barrel"].Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, BarrelTexture, color, Constants.Graphics.TankColorizeAmount);
         }
 
-        public void SetAngleAndPowerByTouchGesture(Vector2 aim, float minLength, float maxLength)
+        public void SetAngleAndPowerByAimVector(Vector2 aim, float minLength, float maxLength)
         {
             if (aim.Y > 0)
             {
