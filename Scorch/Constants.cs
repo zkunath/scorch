@@ -4,11 +4,12 @@
     {
         public static class Game
         {
-            public const int NumPlayers = 3;
+            public const int NumPlayers = 2;
         }
         
         public static class Physics
         {
+            public const int SettledThresholdInMilliseconds = 1000;
             public const float GravityAcceleration = 300;
             public const int ExplosionDurationInMilliseconds = 50;
             public const float ExplosionBaseRadius = 64f;
@@ -22,7 +23,12 @@
         {
             public const bool ConsumeDragGesture = true;
             public const bool AimIndicatorEnabled = false;
-            public const float AimOverlayOpacity = 0.75f;
+            public const float AimIndicatorOpacity = 1f;
+            public const bool CurrentPlayerIndicatorEnabled = true;
+            public const float CurrentPlayerIndicatorOpacity = 0.25f;
+            public const float CurrentPlayerIndicatorScaleFactor = 0.25f;
+            public const bool PowerIndicatorEnabled = true;
+            public const float PowerIndicatorOpacity = 1f;
             public const int PowerIndicatorDurationInMilliseconds = 500;
 
             public const float BackgroundHeightFactor = 0.2f;
@@ -39,7 +45,7 @@
 
         public static class Graphics
         {
-            public const float ProjectileScale = 0.075f;
+            public const float ProjectileScale = 0.05f;
             public const float TankColorizeAmount = 0.7f;
             public const float TankScorchBlackness = 0.8f;
             public const float PowerIndicatorScaleFactor = 190f / 128f; // ratio of aim indicator asset to power indicator asset

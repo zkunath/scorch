@@ -148,7 +148,6 @@ namespace Scorch
                 TextureAssets);
             HUD.InputControls["resetButton"].AddOnButtonPressedEventHandler(new GameEventHandler(ResetField), this);
             HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
-            HUD.InputControls["playerButton"].AddOnButtonPressedEventHandler(new GameEventHandler(NextPlayer), this);
 
             InputManager = new InputManager();
             TouchPanel.EnabledGestures = GestureType.FreeDrag;
@@ -195,6 +194,7 @@ namespace Scorch
             foreach (var tank in game.Tanks)
             {
                 tank.Power = Constants.HUD.InitialPower;
+                tank.Visible = true;
             }
 
             game.Terrain.Regenerate(game.Tanks);
@@ -210,10 +210,13 @@ namespace Scorch
             }
 
             game.HUD.SetCurrentPlayer(game.CurrentPlayerTank);
+            game.HUD.Mode = HudMode.Aim;
         }
 
         private static void Fire(ScorchGame game)
         {
+            game.HUD.Mode = HudMode.Locked;
+
             var velocity = game.CurrentPlayerTank.Power * Constants.Physics.PlayerPowerVelocityFactor * new Vector2(
                 (float)Math.Cos(game.CurrentPlayerTank.BarrelAngleInRadians),
                 (float)Math.Sin(game.CurrentPlayerTank.BarrelAngleInRadians));
@@ -226,6 +229,7 @@ namespace Scorch
 
             game.GraphicsEngine.AddDrawableObject(projectile);
             game.PhysicsEngine.AddPhysicsObject(projectile);
+            game.PhysicsEngine.AddSettledEventHandler(new GameEventHandler(NextPlayer), game);
         }
     }
 }

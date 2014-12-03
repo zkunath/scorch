@@ -12,7 +12,20 @@ namespace Scorch.DataModels
         private GraphicsDevice GraphicsDevice;
         private Texture2D TankTexture;
         private Texture2D BarrelTexture;
-        private Color Color;
+        private Color _Color;
+        public Color Color 
+        {
+            get
+            {
+                return _Color;
+            }
+            set
+            {
+                _Color = value;
+                Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, TankTexture, _Color, Constants.Graphics.TankColorizeAmount);
+                ChildObjects["barrel"].Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, BarrelTexture, _Color, Constants.Graphics.TankColorizeAmount);
+            }
+        }
 
         private int _BarrelAngleInDegrees;
         public int BarrelAngleInDegrees
@@ -105,13 +118,6 @@ namespace Scorch.DataModels
             PhysicalProperties |= Physics.PhysicalProperties.AffectedByGravity;
         }
 
-        public void SetColor(Color color)
-        {
-            Color = color;
-            Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, TankTexture, color, Constants.Graphics.TankColorizeAmount);
-            ChildObjects["barrel"].Texture = GraphicsUtility.ColorizeTexture(GraphicsDevice, BarrelTexture, color, Constants.Graphics.TankColorizeAmount);
-        }
-
         public void SetAngleAndPowerByAimVector(Vector2 aim, float minLength, float maxLength)
         {
             if (aim.Y > 0)
@@ -139,7 +145,7 @@ namespace Scorch.DataModels
             }
             else if (collision.CollisionObjectPhysicsType == PhysicsType.Projectile)
             {
-                SetColor(GraphicsUtility.Blacken(Color, Constants.Graphics.TankScorchBlackness));
+                Color = GraphicsUtility.Blacken(Color, Constants.Graphics.TankScorchBlackness);
             }
         }
     }

@@ -14,12 +14,12 @@ namespace Scorch.Input
     {
         private GraphicsDevice GraphicsDevice;
         private SpriteFont Font;
+        private Texture2D CurrentPlayerIndicatorTexture;
         private Texture2D AimOverlayTexture;
         private Texture2D PowerIndicatorTexture;
         private int PowerIndicatorDelayInMilliseconds;
         private Texture2D BackgroundTexture;
         private Rectangle BackgroundFootprint;
-        private Vector2 Position;
         private Vector2 ViewportSize;
         private Rectangle ViewportFootprint;
 
@@ -39,9 +39,9 @@ namespace Scorch.Input
             ViewportSize = viewportSize;
             ViewportFootprint = new Rectangle(0, 0, (int)ViewportSize.X, (int)ViewportSize.Y);
             Font = font;
+            CurrentPlayerIndicatorTexture = textureAssets["Circle"];
             AimOverlayTexture = textureAssets["AimOverlay"];
             PowerIndicatorTexture = textureAssets["PowerIndicator"];
-            Position = new Vector2(32f, 32f);
             Mode = HudMode.Aim;
             AimOverlayPosition = -Vector2.One;
             
@@ -55,13 +55,6 @@ namespace Scorch.Input
             InputControls = new Dictionary<string, InputControl>();
             var buttonSize = new Vector2((int)(ViewportSize.X * Constants.HUD.ButtonWidthFactor), BackgroundHeight);
             var scalarButtonSize = new Vector2((int)(ViewportSize.X * Constants.HUD.ScalarButtonWidthFactor), BackgroundHeight);
-
-            AddInputControl(
-                "playerButton",
-                "PLAYER",
-                Color.Blue,
-                buttonSize,
-                Align.CenterX | Align.Top);
 
             AddInputControl(
                 "fireButton",
@@ -164,13 +157,8 @@ namespace Scorch.Input
         {
             game.SpriteBatch.DrawString(
                 Font,
-                string.Format(
-                    "HUD mode: {0}\n{1}\nangle: {2}\npower: {3}",
-                    Mode,
-                    game.CurrentPlayerTank.Id,
-                    game.CurrentPlayerTank.BarrelAngleInDegrees.ToString(),
-                    game.CurrentPlayerTank.Power.ToString()),
-                Position,
+                string.Format("HUD mode: {0}", Mode),
+                new Vector2(8f, 0f),
                 Color.Black);
 
             game.SpriteBatch.Draw(
@@ -178,34 +166,72 @@ namespace Scorch.Input
                 drawRectangle: BackgroundFootprint,
                 depth: Constants.Graphics.DrawOrder.HudBack);
 
-            foreach (var inputControl in InputControls.Values)
+            if (Mode == HudMode.Aim)
             {
-                inputControl.Draw(game.SpriteBatch);
-            }
+                if (Constants.HUD.CurrentPlayerIndicatorEnabled)
+                {
+                    game.SpriteBatch.Draw(
+                        CurrentPlayerIndicatorTexture,
+                        position: game.CurrentPlayerTank.BarrelOriginPosition,
+                        origin: new Vector2(CurrentPlayerIndicatorTexture.Width, CurrentPlayerIndicatorTexture.Height) / 2f,
+                        scale: Vector2.One * Constants.HUD.CurrentPlayerIndicatorScaleFactor,
+                        depth: Constants.Graphics.DrawOrder.Back,
+                        color: Color.White * Constants.HUD.CurrentPlayerIndicatorOpacity);
+                }
 
-            if (AimTouchId != 0 && Constants.HUD.AimIndicatorEnabled)
-            {
-                game.SpriteBatch.Draw(
-                    AimOverlayTexture,
-                    position: AimOverlayPosition,
-                    origin: new Vector2(96, 0),
-                    scale: Vector2.One * 2f,
-                    depth: Constants.Graphics.DrawOrder.TankMiddle,
-                    color: Color.White * Constants.HUD.AimOverlayOpacity);
-            }
+                foreach (var inputControl in InputControls.Values)
+                {
+                    inputControl.Draw(game.SpriteBatch);
+                }
 
-            if (PowerIndicatorDelayInMilliseconds > 0)
+                game.SpriteBatch.DrawString(
+                    Font,
+                    string.Format(
+                        "\nangle: {0}\npower: {1}",
+                        game.CurrentPlayerTank.BarrelAngleInDegrees.ToString(),
+                        game.CurrentPlayerTank.Power.ToString()),
+                    new Vector2(8f, 0f),
+                    Color.Black);
+
+                if (AimTouchId != 0 && Constants.HUD.AimIndicatorEnabled)
+                {
+                    game.SpriteBatch.Draw(
+                        AimOverlayTexture,
+                        position: AimOverlayPosition,
+                        origin: new Vector2(96, 0),
+                        scale: Vector2.One * 2f,
+                        depth: Constants.Graphics.DrawOrder.TankMiddle,
+                        color: Color.White * Constants.HUD.AimIndicatorOpacity);
+                }
+
+                if (Constants.HUD.PowerIndicatorEnabled && PowerIndicatorDelayInMilliseconds > 0)
+                {
+                    float scaleFactor = game.CurrentPlayerTank.Power / 100f * Constants.Graphics.PowerIndicatorScaleFactor;
+                    game.SpriteBatch.Draw(
+                        PowerIndicatorTexture,
+                        position: game.CurrentPlayerTank.BarrelEndPosition,
+                        scale: Vector2.One * scaleFactor,
+                        origin: new Vector2(0f, 17f),
+                        rotation: game.CurrentPlayerTank.BarrelAngleInRadians,
+                        depth: Constants.Graphics.DrawOrder.Back,
+                        color: Color.White * Constants.HUD.PowerIndicatorOpacity *
+                            (1f * PowerIndicatorDelayInMilliseconds / Constants.HUD.PowerIndicatorDurationInMilliseconds));
+                }
+            }
+            else if (Mode == HudMode.Locked)
             {
-                float scaleFactor = game.CurrentPlayerTank.Power / 100f * Constants.Graphics.PowerIndicatorScaleFactor;
-                game.SpriteBatch.Draw(
-                    PowerIndicatorTexture,
-                    position: game.CurrentPlayerTank.BarrelEndPosition,
-                    scale: Vector2.One * scaleFactor,
-                    origin: new Vector2(0f, 17f),
-                    rotation: game.CurrentPlayerTank.BarrelAngleInRadians,
-                    depth: Constants.Graphics.DrawOrder.Back,
-                    color: Color.White * Constants.HUD.AimOverlayOpacity * 
-                        (1f * PowerIndicatorDelayInMilliseconds / Constants.HUD.PowerIndicatorDurationInMilliseconds));
+                const string lockedText = "scorch";
+
+                game.SpriteBatch.DrawString(
+                    Font,
+                    lockedText,
+                    GraphicsUtility.AlignText(BackgroundFootprint, Font, lockedText, Align.Center),
+                    game.CurrentPlayerTank.Color,
+                    0f,
+                    Vector2.Zero,
+                    1f,
+                    SpriteEffects.None,
+                    Constants.Graphics.DrawOrder.HudFront);
             }
         }
 
@@ -261,11 +287,10 @@ namespace Scorch.Input
 
             InputControls.Add(id, inputControl);
         }
-        private static class HudMode
-        {
-            public const string Explore = "Explore";
-            public const string Aim = "Aim";
-            public const string Locked = "Locked";
-        }
+    }
+    public static class HudMode
+    {
+        public const string Aim = "Aim";
+        public const string Locked = "Locked";
     }
 }

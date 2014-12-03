@@ -67,7 +67,7 @@ namespace Scorch.DataModels
                 }
 
                 tanks[i].BarrelAngleInDegrees = (i >= tanks.Length / 2 ? 180 : 0);
-                tanks[i].SetColor(GraphicsUtility.ChooseRandomColor(Randomizer, Constants.Terrain.PlayerColorRandomness));
+                tanks[i].Color = GraphicsUtility.ChooseRandomColor(Randomizer, Constants.Terrain.PlayerColorRandomness);
             }
 
             GenerateTexture();

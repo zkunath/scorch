@@ -19,7 +19,7 @@ namespace Scorch.DataModels
             : base(
                 PhysicsType.Projectile,
                 id,
-                TextureAssets["SpikyCircle"],
+                TextureAssets["Circle"],
                 position)
         {
             Origin = Size / 2f;

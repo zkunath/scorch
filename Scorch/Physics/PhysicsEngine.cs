@@ -12,10 +12,14 @@ namespace Scorch.Physics
         private Dictionary<string, IPhysicsObject> PhysicsObjects;
         private Dictionary<string, Tank> Tanks;
         private Terrain Terrain;
+        private event ScorchGame.GameEventHandler Settled;
+        private ScorchGame Game;
+        private TimeSpan SettledTime;
 
-        public PhysicsEngine(Terrain terrain)
+        public PhysicsEngine(ScorchGame game)
         {
-            Terrain = terrain;
+            Game = game;
+            Terrain = game.Terrain;
             PhysicsObjects = new Dictionary<string, IPhysicsObject>();
             Tanks = new Dictionary<string, Tank>();
         }
@@ -114,6 +118,12 @@ namespace Scorch.Physics
                 game.GraphicsEngine.AddDrawableObject(fieldObject);
                 AddPhysicsObject(fieldObject);
             }
+
+            if (Settled != null && Game != null && IsSettled(gameTime))
+            {
+                Settled(Game);
+                Settled = null;
+            }
         }
 
         public void StopFallingObjectOnTerrain(IPhysicsObject physicsObject, Terrain terrain)
@@ -122,6 +132,28 @@ namespace Scorch.Physics
             float positionAdjustmentY = terrain.Size.Y - maxTerrainHeightUnderFootprint - physicsObject.Footprint.Bottom;
             physicsObject.Velocity = Vector2.Zero;
             physicsObject.Position += new Vector2(0, positionAdjustmentY);
+        }
+
+        public void AddSettledEventHandler(ScorchGame.GameEventHandler eventHandler)
+        {
+            Settled += eventHandler;
+            SettledTime = TimeSpan.Zero;
+        }
+
+        private bool IsSettled(GameTime gameTime)
+        {
+            bool atLeastOneObjectIsMoving = PhysicsObjects.Values.Any(o => o.Velocity != Vector2.Zero);
+            
+            if (atLeastOneObjectIsMoving)
+            {
+                SettledTime = TimeSpan.Zero;
+                return false;
+            }
+            else
+            {
+                SettledTime += gameTime.ElapsedGameTime;
+                return SettledTime > TimeSpan.FromMilliseconds(Constants.Physics.SettledThresholdInMilliseconds);
+            }
         }
 
         private static bool CollidesWithFootprint(IPhysicsObject physicsObject, Vector2 previousPosition, IPhysicsObject collisionObject)
