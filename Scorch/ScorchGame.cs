@@ -169,7 +169,7 @@ namespace Scorch
                 (int)graphicsEngine.FieldSize.Y);
 
             graphicsEngine.AddDrawableObject(Terrain);
-            PhysicsEngine = new PhysicsEngine(Terrain);
+            PhysicsEngine = new PhysicsEngine(this);
 
             for (int i = 0; i < numPlayers; i++)
             {
@@ -229,7 +229,7 @@ namespace Scorch
 
             game.GraphicsEngine.AddDrawableObject(projectile);
             game.PhysicsEngine.AddPhysicsObject(projectile);
-            game.PhysicsEngine.AddSettledEventHandler(new GameEventHandler(NextPlayer), game);
+            game.PhysicsEngine.AddSettledEventHandler(new GameEventHandler(NextPlayer));
         }
     }
 }
