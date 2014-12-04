@@ -11,11 +11,15 @@
         {
             public const int SettledThresholdInMilliseconds = 1000;
             public const float GravityAcceleration = 300;
-            public const int ExplosionDurationInMilliseconds = 50;
-            public const float ExplosionBaseRadius = 64f;
-            public const float ExplosionBaseDamage = 100f;
-            public const float ExplosionScorchRadiusFactor = 1.1f;
             public const float CollisionDetectionMinDistancePerStep = 3f;
+            public const int ExplosionDurationInMilliseconds = 50;
+            public const float ExplosionScorchRadiusFactor = 1.1f;
+            public const float ExplosionBaseRadius = 64f;
+            public const int PlayerMaxHealth = 100;
+            public const float PlayerDeathExplosionFactor = 3f;
+            public const int ExplosionCenterDamage = 200;
+            public const float ProjectileCollisionSpeedToDamageRatio = 3f;
+            public const float TerrainCollisionSpeedToDamageRatio = 3f;
             public const float PlayerPowerVelocityFactor = 8f;
         }
 
@@ -30,6 +34,7 @@
             public const bool PowerIndicatorEnabled = true;
             public const float PowerIndicatorOpacity = 1f;
             public const int PowerIndicatorDurationInMilliseconds = 500;
+            public const int DamageTextDelayInMilliseconds = 2000;
 
             public const float BackgroundHeightFactor = 0.2f;
             public const float ButtonWidthFactor = 0.25f;
@@ -47,7 +52,6 @@
         {
             public const float ProjectileScale = 0.05f;
             public const float TankColorizeAmount = 0.7f;
-            public const float TankScorchBlackness = 0.8f;
             public const float PowerIndicatorScaleFactor = 190f / 128f; // ratio of aim indicator asset to power indicator asset
 
             public static class DrawOrder

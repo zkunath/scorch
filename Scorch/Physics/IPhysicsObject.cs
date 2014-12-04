@@ -10,6 +10,7 @@ namespace Scorch.Physics
     public interface IPhysicsObject
     {
         string Id { get; }
+        bool Visible { get; }
         PhysicalProperties PhysicalProperties { get; }
         PhysicsType PhysicsType { get; }
         Vector2 Position { get; set; }

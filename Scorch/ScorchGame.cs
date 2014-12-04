@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Scorch
 {
@@ -104,7 +106,7 @@ namespace Scorch
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            PhysicsEngine.Update(this, gameTime);
+            PhysicsEngine.Update(gameTime);
             InputManager.Update();
             HUD.Update(this, gameTime, InputManager.TouchInputs, InputManager.TouchGestures);
 
@@ -146,7 +148,6 @@ namespace Scorch
                 viewportSize,
                 HudFont,
                 TextureAssets);
-            HUD.InputControls["resetButton"].AddOnButtonPressedEventHandler(new GameEventHandler(ResetField), this);
             HUD.InputControls["fireButton"].AddOnButtonPressedEventHandler(new GameEventHandler(Fire), this);
 
             InputManager = new InputManager();
@@ -189,16 +190,31 @@ namespace Scorch
                 Color.Black);
         }
 
-        private static void ResetField(ScorchGame game)
+        public static async void PhysicsSettled(ScorchGame game)
         {
-            foreach (var tank in game.Tanks)
+            int aliveTankCount = game.Tanks.Count(t => !t.Dead);
+            
+            if (aliveTankCount == 0)
             {
-                tank.Power = Constants.HUD.InitialPower;
-                tank.Visible = true;
+                game.HUD.InfoText += "\nthis round is a draw!";
+            }
+            else if (aliveTankCount == 1)
+            {
+                game.HUD.InfoText += string.Format("\n{0} wins the round!", game.Tanks.First(t => !t.Dead).Id);
             }
 
-            game.Terrain.Regenerate(game.Tanks);
-            game.HUD.SetCurrentPlayer(game.CurrentPlayerTank);
+            if (!string.IsNullOrEmpty(game.HUD.InfoText))
+            {
+                await Task.Delay(Constants.HUD.DamageTextDelayInMilliseconds);
+            }
+
+            if (aliveTankCount <= 1)
+            {
+                game.HUD.InfoText = string.Empty;
+                ResetField(game);
+            }
+
+            NextPlayer(game);
         }
 
         private static void NextPlayer(ScorchGame game)
@@ -213,9 +229,29 @@ namespace Scorch
             game.HUD.Mode = HudMode.Aim;
         }
 
+        private static void ResetField(ScorchGame game)
+        {
+            game.HUD.InfoText = string.Empty;
+
+            foreach (var tank in game.Tanks)
+            {
+                tank.Visible = false;
+            }
+
+            game.Terrain.Visible = false;
+            game.Terrain.Regenerate(game.Tanks);
+            game.Terrain.Visible = true;
+
+            foreach (var tank in game.Tanks)
+            {
+                tank.Reset();
+            }
+        }
+
         private static void Fire(ScorchGame game)
         {
             game.HUD.Mode = HudMode.Locked;
+            game.HUD.InfoText = string.Empty;
 
             var velocity = game.CurrentPlayerTank.Power * Constants.Physics.PlayerPowerVelocityFactor * new Vector2(
                 (float)Math.Cos(game.CurrentPlayerTank.BarrelAngleInRadians),
@@ -229,7 +265,7 @@ namespace Scorch
 
             game.GraphicsEngine.AddDrawableObject(projectile);
             game.PhysicsEngine.AddPhysicsObject(projectile);
-            game.PhysicsEngine.AddSettledEventHandler(new GameEventHandler(NextPlayer));
+            game.PhysicsEngine.TrackSettledEvent();
         }
     }
 }

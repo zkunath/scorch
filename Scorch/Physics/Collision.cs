@@ -5,6 +5,7 @@
         public IPhysicsObject PhysicsObject { get; private set; }
         public IPhysicsObject CollisionObject { get; private set; }
         public PhysicsType CollisionObjectPhysicsType { get; private set; }
+        public float Distance { get; set; }
 
         public Collision(IPhysicsObject physicsObject, IPhysicsObject collisionObject)
         {

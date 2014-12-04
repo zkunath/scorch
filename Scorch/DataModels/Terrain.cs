@@ -73,7 +73,19 @@ namespace Scorch.DataModels
             GenerateTexture();
         }
 
-        public void AffectTerrainWithDrawable(Scorch.Graphics.IDrawable drawable, TerrainEffect effect)
+        public override void HandleCollision(ScorchGame game, Collision collision)
+        {
+            if (collision.CollisionObjectPhysicsType == Physics.PhysicsType.Explosion)
+            {
+                var explosion = (Explosion)collision.CollisionObject;
+                explosion.Scale *= Constants.Physics.ExplosionScorchRadiusFactor;
+                game.Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Scorch);
+                explosion.Scale /= Constants.Physics.ExplosionScorchRadiusFactor;
+                game.Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Destroy);
+            }
+        }
+
+        private void AffectTerrainWithDrawable(Scorch.Graphics.IDrawable drawable, TerrainEffect effect)
         {
             var drawableScaledSize = drawable.Size * drawable.Scale;
             AffectTerrainInCircle(drawable.Position, drawableScaledSize.X / 2f, effect);

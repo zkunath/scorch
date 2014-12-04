@@ -45,14 +45,14 @@ namespace Scorch.Physics
             }
         }
 
-        public void Update(ScorchGame game, GameTime gameTime)
+        public void Update(GameTime gameTime)
         {
             float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var removeObjectIds = new HashSet<string>();
             var addFieldObjects = new List<FieldObject>();
             var collisions = new HashSet<Collision>();
 
-            foreach (var physicsObject in PhysicsObjects.Values)
+            foreach (var physicsObject in PhysicsObjects.Values.Where(o => o.Visible))
             {
                 if (physicsObject.TimeToLive.HasValue)
                 {
@@ -87,7 +87,7 @@ namespace Scorch.Physics
 
                 if (physicsObject.PhysicsType == PhysicsType.Projectile)
                 {
-                    foreach (var tank in Tanks.Values)
+                    foreach (var tank in Tanks.Values.Where(t => t.Visible))
                     {
                         if (CollidesWithFootprint(physicsObject, previousPosition, tank))
                         {
@@ -95,34 +95,74 @@ namespace Scorch.Physics
                         }
                     }
                 }
+                else if (physicsObject.PhysicsType == PhysicsType.Explosion)
+                {
+                    var explosion = (Explosion)physicsObject;
+                    if (!explosion.IsCollisionChecked)
+                    {
+                        float tankDistanceFromExplosionCenter = float.MaxValue;
+                        foreach (var tank in Tanks.Values.Where(t => t.Visible))
+                        {
+                            var vulnerablePositions = new List<Vector2>();
+                            vulnerablePositions.Add(tank.BarrelOriginPosition);
+                            vulnerablePositions.Add(tank.BarrelEndPosition);
+                            vulnerablePositions.Add(new Vector2(tank.Footprint.Left, tank.Footprint.Top));
+                            vulnerablePositions.Add(new Vector2(tank.Footprint.Left, tank.Footprint.Bottom));
+                            vulnerablePositions.Add(new Vector2(tank.Footprint.Right, tank.Footprint.Top));
+                            vulnerablePositions.Add(new Vector2(tank.Footprint.Right, tank.Footprint.Bottom));
+                            tankDistanceFromExplosionCenter = vulnerablePositions.Min(p => Vector2.Distance(p, explosion.Position));
+
+                            if (tankDistanceFromExplosionCenter < explosion.Radius)
+                            {
+                                var collision = new Collision(physicsObject, tank) { Distance = tankDistanceFromExplosionCenter };
+                                collisions.Add(collision);
+                            }
+                        }
+                        
+                        explosion.IsCollisionChecked = true;
+                    }
+                }
             }
 
             foreach (var collision in collisions)
             {
-                collision.PhysicsObject.HandleCollision(game, collision);
+                collision.PhysicsObject.HandleCollision(Game, collision);
 
                 if (collision.CollisionObject != null)
                 {
-                    collision.CollisionObject.HandleCollision(game, new Collision(collision.CollisionObject, collision.PhysicsObject));
+                    collision.CollisionObject.HandleCollision(
+                        Game,
+                        new Collision(collision.CollisionObject, collision.PhysicsObject)
+                        {
+                            Distance = collision.Distance
+                        });
                 }
             }
 
-            foreach (var objectId in removeObjectIds)
-            {
-                game.GraphicsEngine.RemoveDrawableObject(objectId);
-                RemovePhysicsObject(objectId);
-            }
+            RemoveObjectsById(removeObjectIds);
 
             foreach (var fieldObject in addFieldObjects)
             {
-                game.GraphicsEngine.AddDrawableObject(fieldObject);
+                Game.GraphicsEngine.AddDrawableObject(fieldObject);
                 AddPhysicsObject(fieldObject);
             }
 
-            if (Settled != null && Game != null && IsSettled(gameTime))
+            if (Settled != null && IsSettled(gameTime))
             {
-                Settled(Game);
-                Settled = null;
+                foreach (var tank in Tanks.Values.Where(t => t.Visible))
+                {
+                    if (tank.Dead)
+                    {
+                        tank.Die(Game);
+                        SettledTime = TimeSpan.Zero;
+                    }
+                }
+
+                if (IsSettled(gameTime))
+                {
+                    Settled(Game);
+                    Settled = null;
+                }
             }
         }
 
@@ -134,17 +174,17 @@ namespace Scorch.Physics
             physicsObject.Position += new Vector2(0, positionAdjustmentY);
         }
 
-        public void AddSettledEventHandler(ScorchGame.GameEventHandler eventHandler)
+        public void TrackSettledEvent()
         {
-            Settled += eventHandler;
+            Settled += ScorchGame.PhysicsSettled;
             SettledTime = TimeSpan.Zero;
         }
 
         private bool IsSettled(GameTime gameTime)
         {
-            bool atLeastOneObjectIsMoving = PhysicsObjects.Values.Any(o => o.Velocity != Vector2.Zero);
+            bool atLeastOneObjectIsNotSettled = PhysicsObjects.Values.Any(o => o.Velocity != Vector2.Zero || o.TimeToLive.HasValue);
             
-            if (atLeastOneObjectIsMoving)
+            if (atLeastOneObjectIsNotSettled)
             {
                 SettledTime = TimeSpan.Zero;
                 return false;
@@ -153,6 +193,15 @@ namespace Scorch.Physics
             {
                 SettledTime += gameTime.ElapsedGameTime;
                 return SettledTime > TimeSpan.FromMilliseconds(Constants.Physics.SettledThresholdInMilliseconds);
+            }
+        }
+
+        private void RemoveObjectsById(HashSet<string> removeObjectIds)
+        {
+            foreach (var objectId in removeObjectIds)
+            {
+                Game.GraphicsEngine.RemoveDrawableObject(objectId);
+                RemovePhysicsObject(objectId);
             }
         }
 
@@ -167,7 +216,8 @@ namespace Scorch.Physics
 
         private static bool CollidesWithTerrain(IPhysicsObject physicsObject, Vector2 previousPosition, Terrain terrain)
         {
-            if (physicsObject.Velocity == Vector2.Zero)
+            if (physicsObject.PhysicsType != PhysicsType.Explosion &&
+                physicsObject.Velocity == Vector2.Zero)
             {
                 return false;
             }
@@ -184,6 +234,16 @@ namespace Scorch.Physics
                     previousPosition,
                     physicsObject.Position,
                     p => terrain.IsTerrainLocatedAtPosition(p.Position) || p.Position.Y > terrain.Size.Y);
+            }
+            else if (physicsObject.PhysicsType == PhysicsType.Explosion)
+            {
+                var explosion = (Explosion)physicsObject;
+                if (!explosion.IsCollisionChecked)
+                {
+                    // it's probably true, so skip the check
+                    // return FootprintCollidesWithTerrain(explosion, terrain);
+                    return true;
+                }
             }
 
             return false;

@@ -28,6 +28,7 @@ namespace Scorch.Input
         public Vector2 AimOverlayPosition { get; set; }
         public int AimTouchId { get; set; }
         public Dictionary<string, InputControl> InputControls { get; private set; }
+        public string InfoText { get; set; }
 
         public HeadsUpDisplay(
             GraphicsDevice graphicsDevice,
@@ -62,13 +63,6 @@ namespace Scorch.Input
                 Color.Red,
                 buttonSize,
                 Align.CenterX | Align.Bottom);
-
-            AddInputControl(
-                "resetButton",
-                "RESET",
-                Color.Green,
-                buttonSize,
-                Align.Right | Align.Top);
 
             var angleControl = new ScalarInputControl(
                 GraphicsDevice,
@@ -155,11 +149,11 @@ namespace Scorch.Input
 
         public void Draw(ScorchGame game)
         {
-            game.SpriteBatch.DrawString(
-                Font,
-                string.Format("HUD mode: {0}", Mode),
-                new Vector2(8f, 0f),
-                Color.Black);
+            var modeText = string.Format("HUD mode: {0}", Mode);
+            DrawShadowedText(
+                game.SpriteBatch,
+                modeText,
+                Color.White); 
 
             game.SpriteBatch.Draw(
                 BackgroundTexture,
@@ -184,14 +178,15 @@ namespace Scorch.Input
                     inputControl.Draw(game.SpriteBatch);
                 }
 
-                game.SpriteBatch.DrawString(
-                    Font,
-                    string.Format(
-                        "\nangle: {0}\npower: {1}",
-                        game.CurrentPlayerTank.BarrelAngleInDegrees.ToString(),
-                        game.CurrentPlayerTank.Power.ToString()),
-                    new Vector2(8f, 0f),
-                    Color.Black);
+                var aimText = string.Format(
+                    "\nhealth: {2}\nangle: {0}\npower: {1}",
+                    game.CurrentPlayerTank.BarrelAngleInDegrees.ToString(),
+                    game.CurrentPlayerTank.Power.ToString(),
+                    game.CurrentPlayerTank.Health);
+                DrawShadowedText(
+                    game.SpriteBatch,
+                    aimText,
+                    Color.White);
 
                 if (AimTouchId != 0 && Constants.HUD.AimIndicatorEnabled)
                 {
@@ -222,17 +217,61 @@ namespace Scorch.Input
             {
                 const string lockedText = "scorch";
 
-                game.SpriteBatch.DrawString(
-                    Font,
+                DrawShadowedText(
+                    game.SpriteBatch,
+                    InfoText,
+                    Color.White);
+
+                DrawText(
+                    game.SpriteBatch,
                     lockedText,
                     GraphicsUtility.AlignText(BackgroundFootprint, Font, lockedText, Align.Center),
                     game.CurrentPlayerTank.Color,
-                    0f,
-                    Vector2.Zero,
-                    1f,
-                    SpriteEffects.None,
                     Constants.Graphics.DrawOrder.HudFront);
             }
+        }
+
+        private void DrawShadowedText(SpriteBatch spriteBatch, string text, Color color)
+        {
+            Vector2 position = new Vector2(8f, 0f);
+            const float shadowDistance = 1f;
+            
+            DrawText(
+                spriteBatch,
+                text,
+                position,
+                color,
+                Constants.Graphics.DrawOrder.HudFront);
+
+            var shadowOffsets = new List<Vector2>();
+            shadowOffsets.Add(new Vector2(shadowDistance, 0));
+            shadowOffsets.Add(new Vector2(-shadowDistance, 0));
+            shadowOffsets.Add(new Vector2(0, shadowDistance));
+            shadowOffsets.Add(new Vector2(0, -shadowDistance));
+
+            foreach (var shadowPosition in shadowOffsets)
+            {
+                DrawText(
+                    spriteBatch,
+                    text,
+                    position + shadowPosition,
+                    Color.Black,
+                    Constants.Graphics.DrawOrder.HudMiddle);
+            }
+        }
+
+        private void DrawText(SpriteBatch spriteBatch, string text, Vector2 position, Color color, float depth)
+        {
+            spriteBatch.DrawString(
+                Font,
+                text,
+                position,
+                color,
+                0f,
+                Vector2.Zero,
+                1f,
+                SpriteEffects.None,
+                depth);
         }
 
         private void ApplyGameTime(GameTime gameTime)

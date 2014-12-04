@@ -8,16 +8,18 @@ namespace Scorch.DataModels
 {
     public class Explosion : FieldObject
     {
-        public float Damage { get; set; }
+        public int Damage { get; set; }
+        public float Radius { get; set; }
+        public bool IsCollisionChecked { get; set; }
 
         public Explosion(
             string id,
             Dictionary<string, Texture2D> TextureAssets,
             Vector2 position,
             float radius,
-            float damage)
+            int damage)
             : base(
-                PhysicsType.Projectile,
+                PhysicsType.Explosion,
                 id,
                 TextureAssets["Circle"],
                 position)
@@ -27,7 +29,9 @@ namespace Scorch.DataModels
             Depth = Constants.Graphics.DrawOrder.TankFront;
             TimeToLive = TimeSpan.FromMilliseconds(Constants.Physics.ExplosionDurationInMilliseconds);
 
+            Radius = radius;
             Damage = damage;
+            IsCollisionChecked = false;
         }
     }
 }

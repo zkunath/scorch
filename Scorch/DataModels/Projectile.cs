@@ -41,12 +41,7 @@ namespace Scorch.DataModels
                     game.TextureAssets,
                     Position,
                     Constants.Physics.ExplosionBaseRadius,
-                    Constants.Physics.ExplosionBaseDamage);
-
-                explosion.Scale *= Constants.Physics.ExplosionScorchRadiusFactor;
-                game.Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Scorch);
-                explosion.Scale /= Constants.Physics.ExplosionScorchRadiusFactor;
-                game.Terrain.AffectTerrainWithDrawable(explosion, TerrainEffect.Destroy);
+                    Constants.Physics.ExplosionCenterDamage);
 
                 game.PhysicsEngine.AddPhysicsObject(explosion);
                 game.GraphicsEngine.AddDrawableObject(explosion);
